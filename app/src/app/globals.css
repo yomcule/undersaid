@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+/* Michi — Visual Identity Guidelines v0.1, August 2026.
+   Palette derived from materials: undyed cotton, loom-shed greys, the indigo
+   vat, iron-gall ink. Nothing bright, nothing fully saturated — saturation is
+   volume, and this brand is quiet. */
+
+@theme {
+  /* Surfaces — 70% of any view */
+  --color-kora: #f4efe6;        /* primary background; the default surface, not white */
+  --color-kora-deep: #e8e0d3;   /* alternating sections, cards, table fills */
+  --color-bone: #d8cebd;        /* rules, borders, dividers, disabled */
+
+  /* Type — 20% */
+  --color-selvedge: #8c8578;    /* 18px+ ONLY — 3.19:1 on Kora, fails normal text */
+  --color-iron: #5a574f;        /* secondary body, metadata — 6.30:1 AA */
+  --color-ink: #1e1c19;         /* primary text, wordmark — 14.84:1 AAA */
+
+  /* Accent — 3%. One Indigo element per view. */
+  --color-indigo: #2c3a4f;      /* links, buttons — 10.05:1 AAA on Kora */
+  --color-madder: #7a4a3c;      /* errors and sale flags only — 6.38:1 AA */
+
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-plex-mono);
+
+  /* Vertical rhythm: 8px base unit, all spacing a multiple of 8.
+     Do NOT redefine --spacing to 0.5rem to enforce this — in Tailwind v4 that
+     variable scales every spacing, width and height utility at once, so it
+     silently doubles the whole layout. Keep the 4px default and use even
+     steps: p-2 = 8px, p-4 = 16px, p-6 = 24px, p-8 = 32px. */
+}
+
+/* No pure white and no pure black anywhere: #FFFFFF and #000000 are machine
+   colours. The warmth in Kora and Ink is what stops this reading as clinical
+   minimalism. */
+html {
+  background: var(--color-kora);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;          /* never below 16px on web */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fraunces: opsz 100 on screen, weight 300–400 only, WONK on everywhere.
+   The wonk axis is the brand's one visible irregularity, and the reason no
+   script font is needed anywhere in this system. */
+.font-display,
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 100, "SOFT" 12, "WONK" 1;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+/* Hierarchy comes from size and space, never weight and colour. */
+h1 { font-size: 2.5rem; line-height: 1.15; }
+h2 { font-size: 1.75rem; line-height: 1.2; font-weight: 400; }
+h3 { font-size: 1.25rem; line-height: 1.3; font-weight: 400; }
+
+/* Section eyebrows and nav. Caps at this size need heavy tracking or they clot. */
+.label {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  /* Iron, not Selvedge. The guidelines restrict Selvedge to rules, borders
+     and type at 18pt+; at 11px it is 3.19:1 on Kora and fails WCAG AA.
+     Iron is 6.30:1 and keeps the same recessive feel. */
+  color: var(--color-iron);
+}
+
+/* Anything that is data — lot codes, batch codes, measurements, money.
+   Numbers in running text use Archivo; numbers that are data use Plex Mono.
+   That distinction is what makes the mono meaningful rather than decorative. */
+.data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+}
+
+.measure { max-width: 68ch; }   /* 60–75 characters */
+
+::selection { background: var(--color-bone); }
+
+*:focus-visible {
+  outline: 2px solid var(--color-indigo);
+  outline-offset: 2px;
+}
