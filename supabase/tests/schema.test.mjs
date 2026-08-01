@@ -16,11 +16,13 @@ const CONTRIB = '22222222-2222-2222-2222-222222222222';
 
 // ---- seed as superuser -----------------------------------------------------
 await db.exec(`
+insert into invited_emails (email, role_code) values
+  ('owner@michi.test',   'founder'),
+  ('shooter@michi.test', 'contributor');
+
 insert into auth.users (id, email, raw_user_meta_data) values
   ('${OWNER}',   'owner@michi.test',   '{"full_name":"Owner"}'),
   ('${CONTRIB}', 'shooter@michi.test', '{"full_name":"Photographer"}');
-update profiles set role_code = 'owner'       where id = '${OWNER}';
-update profiles set role_code = 'contributor' where id = '${CONTRIB}';
 
 insert into vendors (id, name, type_code, payment_terms_days)
 values ('aaaa0000-0000-0000-0000-000000000001','Bhiwandi Weaves','weaver',30),
@@ -123,7 +125,7 @@ console.log('\nprivilege escalation is blocked:');
   await as(CONTRIB, () => db.query(
     `update profiles set role_code='viewer' where id='${OWNER}'`));
   const r2 = await db.query(`select role_code from profiles where id='${OWNER}'`);
-  ok('contributor cannot demote the owner', r2.rows[0].role_code === 'owner');
+  ok('contributor cannot demote the founder', r2.rows[0].role_code === 'founder');
 
   const e3 = await denied(CONTRIB, `select * from transactions`);
   const rows = await as(CONTRIB, () => db.query('select * from transactions'));
@@ -132,6 +134,30 @@ console.log('\nprivilege escalation is blocked:');
   ok('contributor reads zero contracts', cRows.rows.length === 0);
   const oRows = await as(CONTRIB, () => db.query('select * from orders'));
   ok('contributor reads zero orders', oRows.rows.length === 0);
+}
+
+// ---- 2b. the invite allowlist (the gate OAuth sign-up relies on) ------------
+console.log('\ninvite allowlist:');
+{
+  let e = null;
+  try {
+    await db.query(`insert into auth.users (id, email, raw_user_meta_data)
+                    values (gen_random_uuid(), 'stranger@gmail.com', '{}')`);
+  } catch (err) { e = err.message; }
+  ok('an uninvited Google address cannot create an account',
+     /no invitation exists/.test(e || ''), `got: ${e}`);
+
+  const orphan = await db.query(`select count(*)::int n from auth.users where email='stranger@gmail.com'`);
+  ok('the rejected sign-up leaves no orphan auth row', orphan.rows[0].n === 0);
+
+  const inv = await denied(CONTRIB, `select * from invited_emails`);
+  const rows = await as(CONTRIB, () => db.query('select * from invited_emails'));
+  ok('contributor cannot read the invite list', rows.rows.length === 0);
+
+  await as(CONTRIB, () => db.query(
+    `insert into invited_emails (email, role_code) values ('self@gmail.com','founder')`).catch(() => {}));
+  const added = await db.query(`select count(*)::int n from invited_emails where email='self@gmail.com'`);
+  ok('contributor cannot invite themselves a founder account', added.rows[0].n === 0);
 }
 
 // ---- 3. financial leakage through comments ----------------------------------

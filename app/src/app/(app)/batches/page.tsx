@@ -1,9 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Table, Row, Cell, Empty, Money } from "@/components/ui";
 import { one } from "@/lib/embed";
+import { getRole } from "@/lib/role";
 
 export default async function BatchesPage() {
   const supabase = await createClient();
+  const role = await getRole();
+  const showMoney = role?.canSeeFinancials ?? false;
 
   const [{ data: batches }, { data: economics }, { data: inventory }] =
     await Promise.all([
@@ -34,7 +37,13 @@ export default async function BatchesPage() {
       />
 
       {batches && batches.length > 0 ? (
-        <Table head={["Batch", "Style", "Status", "On hand", "Cost/unit", "Margin"]}>
+        <Table
+          head={
+            showMoney
+              ? ["Batch", "Style", "Status", "On hand", "Cost/unit", "Margin"]
+              : ["Batch", "Style", "Status"]
+          }
+        >
           {batches.map((b) => {
             const e = econ.get(b.id);
             const sizes = stock.get(b.id) ?? [];
@@ -51,41 +60,45 @@ export default async function BatchesPage() {
                     {one<{ label: string }>(b.batch_statuses)?.label}
                   </span>
                 </Cell>
-                <Cell mono>
-                  {sizes.length ? (
-                    <span className="flex flex-wrap gap-2">
-                      {sizes.map((s) => (
-                        <span key={s.size_code}>
-                          <span className="text-iron">{s.size_code}</span>{" "}
-                          {s.units_on_hand}
+                {showMoney ? (
+                  <>
+                    <Cell mono>
+                      {sizes.length ? (
+                        <span className="flex flex-wrap gap-2">
+                          {sizes.map((s) => (
+                            <span key={s.size_code}>
+                              <span className="text-iron">{s.size_code}</span>{" "}
+                              {s.units_on_hand}
+                            </span>
+                          ))}
                         </span>
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="text-iron">—</span>
-                  )}
-                </Cell>
-                <Cell mono>
-                  <Money amount={e?.cost_per_unit ?? null} />
-                </Cell>
-                <Cell mono>
-                  {e ? (
-                    <span
-                      className={
-                        Number(e.gross_margin) < 0 ? "text-madder" : undefined
-                      }
-                    >
-                      <Money amount={e.gross_margin} />
-                      {e.gross_margin_pct !== null ? (
-                        <span className="ml-2 text-iron">
-                          {e.gross_margin_pct}%
+                      ) : (
+                        <span className="text-iron">—</span>
+                      )}
+                    </Cell>
+                    <Cell mono>
+                      <Money amount={e?.cost_per_unit ?? null} />
+                    </Cell>
+                    <Cell mono>
+                      {e ? (
+                        <span
+                          className={
+                            Number(e.gross_margin) < 0 ? "text-madder" : undefined
+                          }
+                        >
+                          <Money amount={e.gross_margin} />
+                          {e.gross_margin_pct !== null ? (
+                            <span className="ml-2 text-iron">
+                              {e.gross_margin_pct}%
+                            </span>
+                          ) : null}
                         </span>
-                      ) : null}
-                    </span>
-                  ) : (
-                    <span className="text-iron">—</span>
-                  )}
-                </Cell>
+                      ) : (
+                        <span className="text-iron">—</span>
+                      )}
+                    </Cell>
+                  </>
+                ) : null}
               </Row>
             );
           })}

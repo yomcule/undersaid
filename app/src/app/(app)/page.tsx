@@ -2,9 +2,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Stat, Empty, Code } from "@/components/ui";
 import { one } from "@/lib/embed";
+import { getRole } from "@/lib/role";
 
 export default async function Overview() {
   const supabase = await createClient();
+  const role = await getRole();
 
   // Each of these silently returns nothing rather than erroring when the
   // caller lacks the role for it — that is RLS doing its job, not a bug.
@@ -17,6 +19,12 @@ export default async function Overview() {
     supabase.from("v_contract_renewals").select("*").order("expires_on"),
     supabase.from("v_vendor_payables").select("*").order("due_on"),
   ]);
+
+  for (const [name, r] of [
+    ["tasks", tasks], ["batches", batches], ["renewals", renewals], ["payables", payables],
+  ] as const) {
+    if (r.error) console.error(`[michi] ${name}:`, r.error.message, r.error.code ?? "");
+  }
 
   const openTasks = tasks.data ?? [];
   const overdue = openTasks.filter((t) => t.is_overdue).length;
@@ -48,7 +56,7 @@ export default async function Overview() {
           value={String(renewals.data?.length ?? 0)}
           hint="next 120 days"
         />
-        {payables.data ? (
+        {role?.canSeeFinancials ? (
           <Stat
             label="Payable"
             value={new Intl.NumberFormat("en-IN", {
@@ -56,7 +64,7 @@ export default async function Overview() {
               currency: "INR",
               maximumFractionDigits: 0,
             }).format(outstanding)}
-            hint={`${payables.data.length} open bills`}
+            hint={`${payables.data?.length ?? 0} open bills`}
           />
         ) : null}
       </div>
