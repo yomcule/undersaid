@@ -112,8 +112,8 @@ $$;
 -- ---------------------------------------------------------------------------
 
 insert into invited_emails (email, role_code, note) values
-  ('shouryamoy@gmail.com',   'founder',      'Shourya'),
-  ('amrithapillay@gmail.com','collaborator', 'Amritha')
+  ('shouryamoy@gmail.com',   'founder', 'Shourya'),
+  ('amrithapillay@gmail.com','founder', 'Amritha')
 on conflict (email) do update
   set role_code = excluded.role_code,
       note      = excluded.note;
