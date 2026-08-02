@@ -49,6 +49,11 @@ async function signInWithEmail(formData: FormData) {
   redirect("/login?sent=1");
 }
 
+// Defaults to on, so forgetting the variable in production shows the button
+// rather than silently hiding it. Local .env.local turns it off, because
+// without Google credentials the button only reaches a Google error page.
+const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_ENABLED !== "false";
+
 export default async function LoginPage(props: {
   searchParams: Promise<{ sent?: string; error?: string }>;
 }) {
@@ -79,23 +84,27 @@ export default async function LoginPage(props: {
           </p>
         ) : (
           <>
-            {/* The one Indigo element in this view. */}
-            <form action={signInWithGoogle}>
-              <button
-                type="submit"
-                className="flex w-full items-center justify-center gap-4 bg-indigo px-6 py-4
-                           text-kora transition-opacity hover:opacity-90"
-              >
-                <GoogleMark />
-                Continue with Google
-              </button>
-            </form>
+            {googleEnabled ? (
+              <>
+                {/* The one Indigo element in this view. */}
+                <form action={signInWithGoogle}>
+                  <button
+                    type="submit"
+                    className="flex w-full items-center justify-center gap-4 bg-indigo px-6 py-4
+                               text-kora transition-opacity hover:opacity-90"
+                  >
+                    <GoogleMark />
+                    Continue with Google
+                  </button>
+                </form>
 
-            <div className="my-8 flex items-center gap-4">
-              <span className="h-px flex-1 bg-bone" />
-              <span className="label">or</span>
-              <span className="h-px flex-1 bg-bone" />
-            </div>
+                <div className="my-8 flex items-center gap-4">
+                  <span className="h-px flex-1 bg-bone" />
+                  <span className="label">or</span>
+                  <span className="h-px flex-1 bg-bone" />
+                </div>
+              </>
+            ) : null}
 
             <form action={signInWithEmail} className="flex flex-col gap-4">
               <label htmlFor="email" className="label">
@@ -111,10 +120,15 @@ export default async function LoginPage(props: {
                            text-ink placeholder:text-selvedge
                            focus:border-indigo focus:outline-none"
               />
+              {/* Exactly one Indigo element per view: whichever action is
+                  primary here depends on whether Google is available. */}
               <button
                 type="submit"
-                className="border border-bone px-6 py-4 text-ink transition-colors
-                           hover:border-indigo"
+                className={
+                  googleEnabled
+                    ? "border border-bone px-6 py-4 text-ink transition-colors hover:border-indigo"
+                    : "bg-indigo px-6 py-4 text-kora transition-opacity hover:opacity-90"
+                }
               >
                 Send sign-in link
               </button>

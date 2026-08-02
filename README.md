@@ -42,6 +42,49 @@ npm install && npm run dev
 Sign-in is a magic link. There is no password field anywhere, and the schema
 stores no credentials — use Bitwarden or 1Password for those.
 
+## Google sign-in
+
+Michi ships with Google OAuth wired up, but the OAuth client itself is yours to
+create — Google will not issue one to anybody else, and the secret must never
+land in this repo. Until it exists, sign-in fails at Google's end with
+`Error 401: invalid_client`, which means Supabase sent an empty client id.
+
+**1. Create the client.** Google Cloud Console → *APIs & Services* →
+*Credentials* → *Create credentials* → *OAuth client ID* → *Web application*.
+
+**2. Authorised redirect URIs.** These point at **Supabase**, not at the app —
+Supabase handles the callback and only then redirects to Michi:
+
+| | URI |
+|---|---|
+| production | `https://<project-ref>.supabase.co/auth/v1/callback` |
+| local | `http://127.0.0.1:54321/auth/v1/callback` |
+
+**3. Authorised JavaScript origins:** `http://localhost:3000` for local, plus
+your Vercel domain for production.
+
+**4. Consent screen.** Choose *External*. While it stays in *Testing*, only
+addresses listed under *Test users* can sign in — a useful second lock on top
+of `invited_emails`. Add both founders there.
+
+**5. Give the credentials to Supabase.**
+
+- *Production:* dashboard → *Authentication* → *Providers* → *Google*.
+- *Local:* create `supabase/.env` (gitignored) with
+
+  ```
+  SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=...
+  SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=...
+  ```
+
+  then `npx supabase stop && npx supabase start`, and drop
+  `NEXT_PUBLIC_GOOGLE_ENABLED=false` from `app/.env.local`.
+
+The button is hidden whenever `NEXT_PUBLIC_GOOGLE_ENABLED=false`, so an
+unconfigured environment falls back to the magic link instead of bouncing
+people to a Google error page. Unset means shown, so forgetting the variable
+in production fails the safe way.
+
 ## Tests
 
 ```bash
