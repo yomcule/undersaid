@@ -163,6 +163,48 @@ console.log('\ninvite allowlist:');
   ok('contributor cannot invite themselves a founder account', added.rows[0].n === 0);
 }
 
+// ---- 2c. content approval is of a version, not an item --------------------
+console.log('\ncontent approval:');
+{
+  await db.query(`insert into content_items (id, title, type_code, author_id)
+                  values ('c0c0c0c0-0000-0000-0000-000000000001','Launch copy','product_copy','${OWNER}')`);
+  await db.query(`insert into content_versions (content_id, body, created_by)
+                  values ('c0c0c0c0-0000-0000-0000-000000000001','First draft.','${OWNER}')`);
+
+  const bad = await db.query(`select status_code from content_items where id='c0c0c0c0-0000-0000-0000-000000000001'`);
+  ok('a new item starts as draft', bad.rows[0].status_code === 'draft');
+
+  let e = null;
+  try {
+    await db.query(`update content_items set status_code='published'
+                     where id='c0c0c0c0-0000-0000-0000-000000000001'`);
+  } catch (err) { e = err.message; }
+  ok('cannot jump straight from draft to published', /cannot move content/.test(e || ''), `got: ${e}`);
+
+  await db.query(`update content_items set status_code='in_review' where id='c0c0c0c0-0000-0000-0000-000000000001'`);
+  await db.query(`insert into content_reviews (content_id, version_no, reviewer_id, decision)
+                  values ('c0c0c0c0-0000-0000-0000-000000000001',1,'${OWNER}','approved')`);
+  const appr = await db.query(`select status_code, approved_version from content_items where id='c0c0c0c0-0000-0000-0000-000000000001'`);
+  ok('approving sets status and records the version',
+     appr.rows[0].status_code === 'approved' && appr.rows[0].approved_version === 1);
+
+  // The bug this whole workflow exists to prevent.
+  await db.query(`insert into content_versions (content_id, body, created_by)
+                  values ('c0c0c0c0-0000-0000-0000-000000000001','Edited after sign-off.','${OWNER}')`);
+  const stale = await db.query(`select status_code, approved_version, current_version
+                                  from content_items where id='c0c0c0c0-0000-0000-0000-000000000001'`);
+  ok('a new version revokes the approval',
+     stale.rows[0].approved_version === null && stale.rows[0].status_code === 'draft',
+     JSON.stringify(stale.rows[0]));
+
+  e = null;
+  try {
+    await db.query(`update content_items set status_code='in_review' where id='c0c0c0c0-0000-0000-0000-000000000001'`);
+    await db.query(`update content_items set status_code='published' where id='c0c0c0c0-0000-0000-0000-000000000001'`);
+  } catch (err) { e = err.message; }
+  ok('unreviewed text cannot be published', /cannot move content|not approved/.test(e || ''), `got: ${e}`);
+}
+
 // ---- 3. financial leakage through comments ----------------------------------
 console.log('\ncomments do not leak financials:');
 {

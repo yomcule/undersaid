@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { one } from "@/lib/embed";
-import { NavLink } from "@/components/nav-link";
+import { Nav, type NavGroup } from "@/components/nav";
 
 async function signOut() {
   "use server";
@@ -36,19 +36,38 @@ export default async function AppLayout({
   );
   const canSeeFinancials = role?.can_see_financials ?? false;
 
-  const nav = [
-    { href: "/", label: "Overview" },
-    { href: "/tasks", label: "Tasks" },
-    { href: "/batches", label: "Batches" },
-    { href: "/logistics", label: "Logistics" },
-    { href: "/returns", label: "Returns" },
-    { href: "/vendors", label: "Vendors" },
-    ...(canSeeFinancials
-      ? [
-          { href: "/contracts", label: "Contracts" },
-          { href: "/money", label: "Money" },
-        ]
-      : []),
+  // Ten flat links wrapped onto a second row. Grouped, the bar is four items
+  // and each group names the question you are asking.
+  const nav: NavGroup[] = [
+    { label: "Overview", items: [{ href: "/", label: "Overview" }] },
+    { label: "Tasks", items: [{ href: "/tasks", label: "Tasks" }] },
+    {
+      label: "Make",
+      items: [
+        { href: "/batches", label: "Batches" },
+        { href: "/logistics", label: "Logistics" },
+        { href: "/returns", label: "Returns" },
+      ],
+    },
+    {
+      label: "Studio",
+      items: [
+        { href: "/content", label: "Content" },
+        { href: "/inspiration", label: "Inspiration" },
+      ],
+    },
+    {
+      label: "Business",
+      items: [
+        { href: "/vendors", label: "Vendors" },
+        ...(canSeeFinancials
+          ? [
+              { href: "/contracts", label: "Contracts" },
+              { href: "/money", label: "Money" },
+            ]
+          : []),
+      ],
+    },
   ];
 
   return (
@@ -65,11 +84,7 @@ export default async function AppLayout({
             MICHI
           </Link>
 
-          <nav className="flex flex-1 flex-wrap gap-8">
-            {nav.map((item) => (
-              <NavLink key={item.href} href={item.href} label={item.label} />
-            ))}
-          </nav>
+          <Nav groups={nav} />
 
           <form action={signOut}>
             <button type="submit" className="label hover:text-ink">

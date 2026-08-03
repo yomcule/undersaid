@@ -287,3 +287,60 @@ select 'SHP-0009','to_customer','in_transit','Delhivery','DL' || (7700000 + row_
   from orders o
  where o.status_code = 'pending'
  limit 1;
+
+-- ---------------------------------------------------------------------------
+-- Inspiration board. Notes are deliberately about *what is being taken*,
+-- since a board of images with no reasoning is just a mood board.
+-- ---------------------------------------------------------------------------
+
+insert into inspirations (title, section_code, note, source_url, source_name,
+                          tags, is_pinned, added_by) values
+  ('One-piece collar construction','product_design',
+   'Collar and stand cut as one. Softer roll, fewer seams, and it suits handloom because it moves with the cloth rather than fighting it. Worth a sample before Batch 004.',
+   'https://example.com/one-piece-collar','Cutter''s Guide',
+   array['collar','construction'], true, '11111111-1111-1111-1111-111111111111'),
+
+  ('Selvedge kept visible at the placket','product_design',
+   'Instead of hiding the loom edge, they run it down the placket. We have handloom selvedge and currently cut it away.',
+   'https://example.com/selvedge-placket','Field notes',
+   array['selvedge','placket'], false, '11111111-1111-1111-1111-111111111111'),
+
+  ('Three shirts, one cloth, sold as a set','product',
+   'Range built from a single lot rather than a single style. That matches how we actually buy fabric — 150m of one weave, not 50m of three.',
+   'https://example.com/one-cloth-range','Small-batch makers',
+   array['range','assortment'], true, '11111111-1111-1111-1111-111111111111'),
+
+  ('Restock as an event, not an apology','product',
+   'Sold-out sizes treated as news rather than a failure. Ties directly to our per-size inventory — we know before anyone asks.',
+   'https://example.com/restock','Retail teardown',
+   array['inventory','launch'], false, '11111111-1111-1111-1111-111111111111'),
+
+  ('Care label that explains, not instructs','communication',
+   'Two sentences about why handloom shrinks, instead of five icons. We have a 3.5–5% shrinkage figure per lot; say it plainly.',
+   'https://example.com/care-copy','Label study',
+   array['copy','care'], true, '11111111-1111-1111-1111-111111111111'),
+
+  ('Naming the weaver on the product page','communication',
+   'Names the cluster and the co-op, not just "handmade". We have that data on every lot already.',
+   'https://example.com/weaver-credit','Provenance writing',
+   array['copy','provenance'], false, '22222222-2222-2222-2222-222222222222'),
+
+  ('Raking side light on weave','photography',
+   'Low, hard side light at ~15° so the weave casts its own shadow. Kills the flatness a soft box gives handloom.',
+   'https://example.com/raking-light','Lighting reference',
+   array['lighting','macro'], true, '22222222-2222-2222-2222-222222222222'),
+
+  ('Garment photographed folded, not worn','photography',
+   'Folded on a flat surface, shot from directly above. Makes the cloth the subject rather than the model.',
+   'https://example.com/folded-flatlay','Studio notes',
+   array['styling'], false, '22222222-2222-2222-2222-222222222222'),
+
+  ('Undyed cotton bag, screen-printed once','packaging',
+   'One-colour print on an unbleached bag that is genuinely reusable. Cheap, and consistent with not bleaching the cloth either.',
+   'https://example.com/cotton-bag','Packaging teardown',
+   array['packaging','sustainability'], false, '11111111-1111-1111-1111-111111111111'),
+
+  ('Madder and indigo swatch pairing','fabric',
+   'Madder ground against indigo topstitch. Both already in our palette and both natural dyes, so the pairing is achievable.',
+   'https://example.com/madder-indigo','Dye archive',
+   array['colour','dye'], false, '11111111-1111-1111-1111-111111111111');
