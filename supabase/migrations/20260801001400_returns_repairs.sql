@@ -128,7 +128,13 @@ left join lateral (
    where ol.batch_id = bs.batch_id
      and ol.size_code = bs.size_code
      and ri.archived_at is null
-) ret on true;
+) ret on true
+where b.archived_at is null
+  -- Lost when this view was redefined here: units_sold and units_on_hand are
+  -- derived from orders, which are financially gated. Without this the view
+  -- also lost its archived-batch filter, so a written-off batch reappeared
+  -- as sellable stock.
+  and app_can_see_financials();
 
 -- ---------------------------------------------------------------------------
 -- The returns desk

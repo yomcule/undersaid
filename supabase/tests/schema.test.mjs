@@ -332,9 +332,9 @@ console.log('\nbatch economics arithmetic:');
   // principle but must not be counted as stock while it is away.
   await db.query(`update return_items set status_code = 'repairing'
                    where order_line_id = 'ffff0000-0000-0000-0000-000000000002'`);
-  const repairing = (await db.query(
+  const repairing = (await as(OWNER, () => db.query(
     `select units_on_hand, units_in_repair from v_batch_size_inventory
-      where batch_id = 'dddd0000-0000-0000-0000-000000000001' and size_code = 'L'`)).rows[0];
+      where batch_id = 'dddd0000-0000-0000-0000-000000000001' and size_code = 'L'`))).rows[0];
   ok('a unit out for repair leaves stock', repairing.units_on_hand === 10, `got ${repairing.units_on_hand}`);
   ok('and is counted as in repair', repairing.units_in_repair === 1, `got ${repairing.units_in_repair}`);
   await db.query(`update return_items set status_code = 'restocked'
@@ -374,6 +374,41 @@ console.log('\npayables:');
      iso(p.due_on) === iso(Date.now() - 15*864e5), `got ${p.due_on}`);
   ok('outstanding = 70,800 - 35,400 = 35,400', Number(p.outstanding_amount) === 35400, `got ${p.outstanding_amount}`);
   ok('flagged overdue', p.is_overdue === true);
+}
+
+// ---- 10. order entry (write path) ----------------------------------------
+console.log('\norder entry:');
+{
+  const denied1 = await denied(CONTRIB,
+    `insert into orders (order_ref, status_code) values ('#TEST-1','confirmed')`);
+  ok('contributor cannot create an order', denied1 !== null, `got: ${denied1}`);
+
+  const before = (await as(OWNER, () => db.query(
+    `select units_on_hand from v_batch_size_inventory
+      where batch_id='dddd0000-0000-0000-0000-000000000001' and size_code='M'`))).rows[0];
+
+  await as(OWNER, () => db.query(
+    `insert into orders (id, order_ref, status_code)
+     values ('11110000-0000-0000-0000-000000000099','#TEST-1','confirmed')`));
+  await as(OWNER, () => db.query(
+    `insert into order_lines (order_id, batch_id, size_code, quantity, unit_price)
+     values ('11110000-0000-0000-0000-000000000099',
+             'dddd0000-0000-0000-0000-000000000001','M',3,2999)`));
+
+  const after = (await as(OWNER, () => db.query(
+    `select units_on_hand from v_batch_size_inventory
+      where batch_id='dddd0000-0000-0000-0000-000000000001' and size_code='M'`))).rows[0];
+  ok('a new order line reduces on-hand for that size',
+     after.units_on_hand === before.units_on_hand - 3,
+     `before ${before.units_on_hand}, after ${after.units_on_hand}`);
+
+  // The bug this section exists to catch: a later migration redefined
+  // v_batch_size_inventory and dropped both its archived-batch filter and
+  // its app_can_see_financials() gate, so units_sold/units_on_hand leaked to
+  // every authenticated user regardless of role.
+  const contribView = await as(CONTRIB, () => db.query('select * from v_batch_size_inventory'));
+  ok('contributor cannot read batch size inventory (financial gate)',
+     contribView.rows.length === 0, `got ${contribView.rows.length}`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
