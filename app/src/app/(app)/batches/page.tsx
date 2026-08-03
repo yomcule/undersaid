@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Table, Row, Cell, Empty, Money, SizeRun } from "@/components/ui";
 import { one } from "@/lib/embed";
@@ -30,11 +31,16 @@ export default async function BatchesPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Production"
-        title="Batches"
-        lede="Cost is allocated from fabric actually consumed and CMT actually invoiced. Units sold come from orders, never a hand-kept counter."
-      />
+      <div className="flex items-start justify-between gap-8">
+        <PageHeader
+          eyebrow="Production"
+          title="Batches"
+          lede="Cost is allocated from fabric actually consumed and CMT actually invoiced. Units sold come from orders, never a hand-kept counter."
+        />
+        <Link href="/batches/new" className="shrink-0 bg-indigo px-6 py-4 text-kora hover:opacity-90">
+          New batch
+        </Link>
+      </div>
 
       {batches && batches.length > 0 ? (
         <Table
@@ -50,7 +56,11 @@ export default async function BatchesPage() {
             const style = one<{ style_code: string; name: string }>(b.styles);
             return (
               <Row key={b.id}>
-                <Cell mono>{b.batch_code}</Cell>
+                <Cell mono>
+                  <Link href={`/batches/${b.id}`} className="hover:text-indigo">
+                    {b.batch_code}
+                  </Link>
+                </Cell>
                 <Cell>
                   {style?.name}
                   <span className="data ml-2 text-iron">{style?.style_code}</span>

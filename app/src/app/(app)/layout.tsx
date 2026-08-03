@@ -45,6 +45,8 @@ export default async function AppLayout({
       label: "Make",
       items: [
         { href: "/batches", label: "Batches" },
+        { href: "/fabric", label: "Fabric" },
+        { href: "/styles", label: "Styles" },
         { href: "/logistics", label: "Logistics" },
         { href: "/returns", label: "Returns" },
       ],
