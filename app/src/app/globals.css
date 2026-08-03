@@ -62,80 +62,91 @@ h1 { font-size: 2.5rem; line-height: 1.15; }
 h2 { font-size: 1.75rem; line-height: 1.2; font-weight: 400; }
 h3 { font-size: 1.25rem; line-height: 1.3; font-weight: 400; }
 
-/* Section eyebrows and nav. Caps at this size need heavy tracking or they clot. */
-.label {
-  font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  /* Iron, not Selvedge. The guidelines restrict Selvedge to rules, borders
-     and type at 18pt+; at 11px it is 3.19:1 on Kora and fails WCAG AA.
-     Iron is 6.30:1 and keeps the same recessive feel. */
-  color: var(--color-iron);
+/* These live in @layer components so Tailwind utilities still win.
+   Unlayered CSS beats every layered rule, which meant `.data text-3xl`
+   rendered at .data's 14px and the headline figure on every stat card
+   silently lost its size. */
+@layer components {
+  /* Section eyebrows and nav. Caps at this size need heavy tracking or they clot. */
+  .label {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    /* Iron, not Selvedge. The guidelines restrict Selvedge to rules, borders
+       and type at 18pt+; at 11px it is 3.19:1 on Kora and fails WCAG AA.
+       Iron is 6.30:1 and keeps the same recessive feel. */
+    color: var(--color-iron);
+  }
+
+  /* Anything that is data — lot codes, batch codes, measurements, money.
+     Numbers in running text use Archivo; numbers that are data use Plex Mono.
+     That distinction is what makes the mono meaningful rather than decorative. */
+  .data {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.875rem;
+  }
+
+  .measure { max-width: 68ch; }   /* 60–75 characters */
 }
 
-/* Anything that is data — lot codes, batch codes, measurements, money.
-   Numbers in running text use Archivo; numbers that are data use Plex Mono.
-   That distinction is what makes the mono meaningful rather than decorative. */
-.data {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.875rem;
+/* @layer base, so component classes and utilities both outrank these.
+   Unlayered, `button { font-size: inherit }` beat `.label` and blew the
+   nav up from 11px to 16px. */
+@layer base {
+  /* Form controls do not inherit type by default, and Safari ignores
+     `font: inherit` on <select> outright. Left alone they render in the
+     browser's own UI font, which put a second sans face on every screen that
+     has a filter — the reason the tasks page looked wrong. */
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+  }
+
+  /* Native select chrome — the blue focus ring, the doubled chevron — belongs
+     to no design system. Replace it with a Bone chevron drawn in the palette. */
+  select {
+    appearance: none;
+    border-radius: 0;
+    padding-right: 1.75rem;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235a574f' stroke-width='1.2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.25rem center;
+  }
+
+  /* Dropdown lists are painted by the OS, so they need real colours rather than
+     `transparent` inherited from the closed control. */
+  select option {
+    background: var(--color-kora);
+    color: var(--color-ink);
+  }
+
+  input,
+  textarea {
+    border-radius: 0;
+  }
+
+  ::placeholder {
+    color: var(--color-selvedge);
+    opacity: 1;   /* Firefox dims placeholders further on its own. */
+  }
+
+  /* Date and number inputs get mono, because they are data. */
+  input[type="date"],
+  input[type="number"] {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection { background: var(--color-bone); }
 }
-
-.measure { max-width: 68ch; }   /* 60–75 characters */
-
-/* Form controls do not inherit type by default, and Safari ignores
-   `font: inherit` on <select> outright. Left alone they render in the
-   browser's own UI font, which put a second sans face on every screen that
-   has a filter — the reason the tasks page looked wrong. */
-input,
-select,
-textarea,
-button {
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  color: inherit;
-}
-
-/* Native select chrome — the blue focus ring, the doubled chevron — belongs
-   to no design system. Replace it with a Bone chevron drawn in the palette. */
-select {
-  appearance: none;
-  border-radius: 0;
-  padding-right: 1.75rem;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235a574f' stroke-width='1.2'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.25rem center;
-}
-
-/* Dropdown lists are painted by the OS, so they need real colours rather than
-   `transparent` inherited from the closed control. */
-select option {
-  background: var(--color-kora);
-  color: var(--color-ink);
-}
-
-input,
-textarea {
-  border-radius: 0;
-}
-
-::placeholder {
-  color: var(--color-selvedge);
-  opacity: 1;   /* Firefox dims placeholders further on its own. */
-}
-
-/* Date and number inputs get mono, because they are data. */
-input[type="date"],
-input[type="number"] {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-::selection { background: var(--color-bone); }
 
 *:focus-visible {
   outline: 2px solid var(--color-indigo);
