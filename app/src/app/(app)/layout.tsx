@@ -64,6 +64,7 @@ export default async function AppLayout({
         { href: "/vendors", label: "Vendors" },
         ...(canSeeFinancials
           ? [
+              { href: "/orders", label: "Orders" },
               { href: "/contracts", label: "Contracts" },
               { href: "/money", label: "Money" },
             ]
