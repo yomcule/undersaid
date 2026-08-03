@@ -25,11 +25,16 @@ export default async function ContentPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Editorial"
-        title="Content"
-        lede="Approval is of a version, not of an item. Edit after sign-off and the item drops back to draft — what ships is always text somebody actually read."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-8">
+        <PageHeader
+          eyebrow="Editorial"
+          title="Content"
+          lede="Approval is of a version, not of an item. Edit after sign-off and the item drops back to draft — what ships is always text somebody actually read."
+        />
+        <Link href="/content/new" className="bg-indigo px-6 py-4 text-kora hover:opacity-90">
+          New content
+        </Link>
+      </div>
 
       {all.length === 0 ? (
         <Empty>Nothing written yet.</Empty>
