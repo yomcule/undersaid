@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Archivo, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, Work_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
 // All three are SIL OFL 1.1 — free, commercial use permitted.
@@ -14,10 +14,13 @@ const fraunces = Fraunces({
   axes: ["SOFT", "WONK", "opsz"],
 });
 
-const archivo = Archivo({
-  variable: "--font-archivo",
+// Work Sans, not the Archivo the guidelines name. Archivo's 400 read too
+// heavy against Fraunces at body size; Work Sans is humanist and open, and
+// 300 is the intended body weight — hence no 600 here at all.
+const workSans = Work_Sans({
+  variable: "--font-work-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["300", "400", "500"],
 });
 
 const plexMono = IBM_Plex_Mono({
@@ -37,7 +40,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${archivo.variable} ${plexMono.variable} h-full`}
+      className={`${fraunces.variable} ${workSans.variable} ${plexMono.variable} h-full`}
     >
       <body className="min-h-full">{children}</body>
     </html>

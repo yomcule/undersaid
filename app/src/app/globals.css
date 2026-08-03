@@ -21,7 +21,7 @@
   --color-madder: #7a4a3c;      /* errors and sale flags only — 6.38:1 AA */
 
   --font-display: var(--font-fraunces);
-  --font-sans: var(--font-archivo);
+  --font-sans: var(--font-work-sans);
   --font-mono: var(--font-plex-mono);
 
   /* Vertical rhythm: 8px base unit, all spacing a multiple of 8.
@@ -42,6 +42,9 @@ html {
 body {
   font-family: var(--font-sans);
   font-size: 16px;          /* never below 16px on web */
+  /* 300, not 400. The lighter weight is the point of the switch — Work Sans
+     at 400 is nearly as dense as the Archivo it replaced. */
+  font-weight: 300;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
