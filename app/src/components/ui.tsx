@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 export function PageHeader({
   eyebrow,
@@ -28,17 +29,35 @@ export function Stat({
   label,
   value,
   hint,
+  href,
 }: {
   label: string;
   value: string;
   hint?: string;
+  /** Where the figure breaks down. Omit for a figure with nowhere to go. */
+  href?: string;
 }) {
-  return (
-    <Card>
+  const body = (
+    <>
       <p className="label">{label}</p>
       <p className="data mt-4 text-3xl">{value}</p>
       {hint ? <p className="mt-2 text-sm text-iron">{hint}</p> : null}
-    </Card>
+    </>
+  );
+
+  if (!href) return <Card>{body}</Card>;
+
+  return (
+    <Link
+      href={href}
+      // The affordance is a hairline that arrives on hover, not a shadow or a
+      // shift. Nothing else in the interface moves when pointed at.
+      className="block bg-kora-deep p-8 outline-offset-2 transition-[box-shadow]
+                 hover:shadow-[inset_0_-2px_0_0_var(--color-ink)]
+                 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo"
+    >
+      {body}
+    </Link>
   );
 }
 
@@ -68,27 +87,102 @@ export function Money({
   );
 }
 
+/**
+ * A size run — size above, quantity below, one column each.
+ *
+ * Laid out inline ("38 7 40 9 42 13") the sizes and the counts are both
+ * numerals in the same face, so the eye cannot tell which is which and the
+ * whole cell reads as one long number. Stacking separates the two registers.
+ */
+export function SizeRun({
+  sizes,
+}: {
+  sizes: { size_code: string; units_on_hand: number }[];
+}) {
+  if (!sizes.length) return <span className="data text-iron">—</span>;
+
+  return (
+    <span className="flex flex-wrap gap-x-5 gap-y-3">
+      {sizes.map((s) => (
+        <span key={s.size_code} className="flex flex-col items-end">
+          <span className="label leading-none">{s.size_code}</span>
+          <span
+            className={`data mt-1 leading-none ${
+              s.units_on_hand === 0 ? "text-selvedge" : ""
+            }`}
+          >
+            {s.units_on_hand}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function Empty({ children }: { children: ReactNode }) {
   return <p className="measure text-iron">{children}</p>;
 }
 
+/** A column that can be sorted. `column` is the database column to order by. */
+export type Column = string | { label: string; column: string };
+
 export function Table({
   head,
   children,
+  sort,
+  dir,
+  params,
 }: {
-  head: string[];
+  head: Column[];
   children: ReactNode;
+  /** Current sort column, if the table is sortable. */
+  sort?: string;
+  dir?: "asc" | "desc";
+  /** Other query params to preserve when a header is clicked (filters). */
+  params?: Record<string, string | undefined>;
 }) {
+  function hrefFor(column: string) {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params ?? {})) if (v) q.set(k, v);
+    // Clicking the active column flips direction; a new column starts ascending.
+    q.set("sort", column);
+    q.set("dir", sort === column && dir === "asc" ? "desc" : "asc");
+    return `?${q.toString()}`;
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-left">
         <thead>
           <tr className="border-b border-bone">
-            {head.map((h) => (
-              <th key={h} className="label py-4 pr-8 font-medium">
-                {h}
-              </th>
-            ))}
+            {head.map((h, i) => {
+              if (typeof h === "string") {
+                return (
+                  <th key={h || i} className="label py-4 pr-8 font-medium">
+                    {h}
+                  </th>
+                );
+              }
+              const active = sort === h.column;
+              return (
+                <th key={h.column} className="py-4 pr-8">
+                  <a
+                    href={hrefFor(h.column)}
+                    aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}
+                    className={`label inline-flex items-center gap-1 ${
+                      active ? "text-ink" : "hover:text-ink"
+                    }`}
+                  >
+                    {h.label}
+                    {/* The indicator only appears on the sorted column, so the
+                        header row stays quiet rather than sprouting arrows. */}
+                    <span aria-hidden="true" className={active ? "" : "opacity-0"}>
+                      {dir === "asc" ? "↑" : "↓"}
+                    </span>
+                  </a>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>{children}</tbody>

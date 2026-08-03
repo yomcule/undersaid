@@ -236,3 +236,54 @@ insert into comments (author_id, body, batch_id) values
 insert into comments (author_id, body, contract_id) values
   ('11111111-1111-1111-1111-111111111111','They opened at 14L, settled at 12L. Do not go above 12.5 on renewal.',
    'f0000000-0000-0000-0000-000000000001');
+
+-- ---------------------------------------------------------------------------
+-- Returns desk: one at each stage, so the queue shows the whole workflow.
+-- ---------------------------------------------------------------------------
+
+with ranked as (
+  select id, row_number() over (order by id) as n from return_items
+)
+update return_items ri set
+  status_code      = v.status,
+  repair_vendor_id = v.vendor,
+  repair_cost      = v.cost,
+  repair_notes     = v.notes
+from (values
+  (1, 'repairing',   'a0000000-0000-0000-0000-000000000002'::uuid, 180.00,
+      'Reinforce side seam, press and re-fold.'),
+  (2, 'inspecting',  null::uuid, null::numeric, null),
+  (3, 'restocked',   null::uuid, null::numeric, null),
+  (4, 'refunded',    null::uuid, null::numeric, null)
+) as v(n, status, vendor, cost, notes)
+join ranked r on r.n = v.n
+where ri.id = r.id;
+
+-- ---------------------------------------------------------------------------
+-- Logistics: who is chasing what.
+-- ---------------------------------------------------------------------------
+
+update batches set tracked_by = '11111111-1111-1111-1111-111111111111'
+ where batch_code in ('B-2026-003');
+
+insert into shipments (reference, leg_code, status_code, carrier_vendor_id, carrier_name,
+                       tracking_ref, tracked_by, origin, destination,
+                       dispatched_on, expected_on, units, batch_id, fabric_lot_id, notes) values
+  ('SHP-0007','to_tailor','in_transit', null, 'Local tempo',
+   'TMP-4471','11111111-1111-1111-1111-111111111111','Bhiwandi','Dharavi',
+   current_date - 3, current_date + 1, 80,
+   'd0000000-0000-0000-0000-000000000003', null, 'Cut fabric for the third run.'),
+  ('SHP-0008','fabric_in','delayed', null, 'Weaver''s own transport',
+   'BHW-DEL-22','22222222-2222-2222-2222-222222222222','Bhiwandi','Studio',
+   current_date - 12, current_date - 4, null,
+   null, 'b0000000-0000-0000-0000-000000000003', 'Chased twice. Dyer ran late on the madder lot.');
+
+insert into shipments (reference, leg_code, status_code, carrier_name, tracking_ref,
+                       tracked_by, origin, destination, dispatched_on, expected_on,
+                       units, order_id, notes)
+select 'SHP-0009','to_customer','in_transit','Delhivery','DL' || (7700000 + row_number() over (order by o.placed_at))::text,
+       '11111111-1111-1111-1111-111111111111','Studio', o.shipping_city,
+       current_date - 1, current_date + 2, 1, o.id, null
+  from orders o
+ where o.status_code = 'pending'
+ limit 1;

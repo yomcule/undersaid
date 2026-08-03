@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { PageHeader, Table, Row, Cell, Empty } from "@/components/ui";
+import { PageHeader, Table, Row, Cell, Empty, type Column } from "@/components/ui";
+import { TaskFilters } from "@/components/task-filters";
 
 async function createTask(formData: FormData) {
   "use server";
@@ -23,29 +25,76 @@ async function createTask(formData: FormData) {
   revalidatePath("/tasks");
 }
 
-async function closeTask(formData: FormData) {
-  "use server";
-  const id = String(formData.get("id"));
-  const supabase = await createClient();
-  // completed_at is set by trigger from the status's is_open flag.
-  await supabase.from("tasks").update({ status_code: "done" }).eq("id", id);
-  revalidatePath("/tasks");
-}
+// Only these are sortable, so a hand-edited ?sort= cannot reach an arbitrary
+// column. PostgREST would reject an unknown name anyway; an allowlist keeps
+// the failure in our code rather than as a 400 from the database.
+const SORTABLE = new Set([
+  "title",
+  "status_sort",
+  "assignee_name",
+  "due_on",
+  "priority",
+]);
 
-export default async function TasksPage() {
+export default async function TasksPage(props: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await props.searchParams;
+  const sort = sp.sort && SORTABLE.has(sp.sort) ? sp.sort : "priority";
+  const dir: "asc" | "desc" = sp.dir === "desc" ? "desc" : "asc";
+
   const supabase = await createClient();
-  const { data: tasks } = await supabase
-    .from("v_open_tasks")
-    .select("*")
-    .order("priority")
-    .order("due_on", { nullsFirst: false });
+
+  let query = supabase.from("v_tasks").select("*");
+
+  // Default view is open work. "all" lifts the filter; anything else is a
+  // specific status code.
+  const status = sp.status ?? "open";
+  if (status === "open") query = query.eq("is_open", true);
+  else if (status !== "all") query = query.eq("status_code", status);
+
+  if (sp.assignee === "none") query = query.is("assignee_id", null);
+  else if (sp.assignee) query = query.eq("assignee_id", sp.assignee);
+
+  if (sp.priority) query = query.eq("priority", Number(sp.priority));
+
+  const { data: tasks, error } = await query
+    .order(sort, { ascending: dir === "asc", nullsFirst: false })
+    // A stable tiebreak, so equal priorities do not shuffle between loads.
+    .order("due_on", { ascending: true, nullsFirst: false });
+
+  if (error) console.error("[michi] tasks:", error.message);
+
+  const [{ data: statuses }, { data: people }] = await Promise.all([
+    supabase.from("task_statuses").select("code, label").order("sort_order"),
+    supabase.from("profiles").select("id, full_name").is("archived_at", null),
+  ]);
+
+  const head: Column[] = [
+    { label: "Task", column: "title" },
+    { label: "Status", column: "status_sort" },
+    { label: "Assignee", column: "assignee_name" },
+    { label: "Due", column: "due_on" },
+    { label: "Priority", column: "priority" },
+  ];
+
+  const carry = {
+    status: sp.status,
+    assignee: sp.assignee,
+    priority: sp.priority,
+  };
 
   return (
     <>
       <PageHeader
         eyebrow="Tasks"
-        title="Open work"
+        title="Work"
         lede="Closed tasks are archived, never deleted — the schema has no DELETE path at all."
+      />
+
+      <TaskFilters
+        statuses={(statuses ?? []).map((s) => ({ value: s.code, label: s.label }))}
+        assignees={(people ?? []).map((p) => ({ value: p.id, label: p.full_name }))}
       />
 
       <form
@@ -100,10 +149,19 @@ export default async function TasksPage() {
       </form>
 
       {tasks && tasks.length > 0 ? (
-        <Table head={["Task", "Assignee", "Due", "Priority", ""]}>
+        <Table head={head} sort={sort} dir={dir} params={carry}>
           {tasks.map((t) => (
             <Row key={t.id}>
-              <Cell>{t.title}</Cell>
+              <Cell>
+                <Link href={`/tasks/${t.id}`} className="hover:text-indigo">
+                  {t.title}
+                </Link>
+              </Cell>
+              <Cell>
+                <span className={t.is_open ? undefined : "text-iron"}>
+                  {t.status_label}
+                </span>
+              </Cell>
               <Cell>
                 <span className="text-iron">{t.assignee_name ?? "—"}</span>
               </Cell>
@@ -119,19 +177,11 @@ export default async function TasksPage() {
                 </span>
               </Cell>
               <Cell mono>{t.priority}</Cell>
-              <Cell>
-                <form action={closeTask}>
-                  <input type="hidden" name="id" value={t.id} />
-                  <button type="submit" className="label hover:text-ink">
-                    Done
-                  </button>
-                </form>
-              </Cell>
             </Row>
           ))}
         </Table>
       ) : (
-        <Empty>Nothing open. Add the first task above.</Empty>
+        <Empty>Nothing matches these filters.</Empty>
       )}
     </>
   );

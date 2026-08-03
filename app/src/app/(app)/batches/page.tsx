@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Table, Row, Cell, Empty, Money } from "@/components/ui";
+import { PageHeader, Table, Row, Cell, Empty, Money, SizeRun } from "@/components/ui";
 import { one } from "@/lib/embed";
 import { getRole } from "@/lib/role";
 
@@ -62,19 +62,8 @@ export default async function BatchesPage() {
                 </Cell>
                 {showMoney ? (
                   <>
-                    <Cell mono>
-                      {sizes.length ? (
-                        <span className="flex flex-wrap gap-2">
-                          {sizes.map((s) => (
-                            <span key={s.size_code}>
-                              <span className="text-iron">{s.size_code}</span>{" "}
-                              {s.units_on_hand}
-                            </span>
-                          ))}
-                        </span>
-                      ) : (
-                        <span className="text-iron">—</span>
-                      )}
+                    <Cell>
+                      <SizeRun sizes={sizes} />
                     </Cell>
                     <Cell mono>
                       <Money amount={e?.cost_per_unit ?? null} />

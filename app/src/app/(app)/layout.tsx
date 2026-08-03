@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { one } from "@/lib/embed";
+import { NavLink } from "@/components/nav-link";
 
 async function signOut() {
   "use server";
@@ -39,8 +40,15 @@ export default async function AppLayout({
     { href: "/", label: "Overview" },
     { href: "/tasks", label: "Tasks" },
     { href: "/batches", label: "Batches" },
+    { href: "/logistics", label: "Logistics" },
+    { href: "/returns", label: "Returns" },
     { href: "/vendors", label: "Vendors" },
-    ...(canSeeFinancials ? [{ href: "/money", label: "Money" }] : []),
+    ...(canSeeFinancials
+      ? [
+          { href: "/contracts", label: "Contracts" },
+          { href: "/money", label: "Money" },
+        ]
+      : []),
   ];
 
   return (
@@ -59,9 +67,7 @@ export default async function AppLayout({
 
           <nav className="flex flex-1 flex-wrap gap-8">
             {nav.map((item) => (
-              <Link key={item.href} href={item.href} className="label hover:text-ink">
-                {item.label}
-              </Link>
+              <NavLink key={item.href} href={item.href} label={item.label} />
             ))}
           </nav>
 

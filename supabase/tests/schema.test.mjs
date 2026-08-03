@@ -62,9 +62,12 @@ values ('ffff0000-0000-0000-0000-000000000001','eeee0000-0000-0000-0000-00000000
        ('ffff0000-0000-0000-0000-000000000002','eeee0000-0000-0000-0000-000000000001',
         'dddd0000-0000-0000-0000-000000000001','L',20,2500);
 
-insert into return_items (order_line_id, quantity, reason_code, is_resellable)
-values ('ffff0000-0000-0000-0000-000000000001',2,'seam_puckering',false),
-       ('ffff0000-0000-0000-0000-000000000002',1,'changed_mind',true);
+-- status_code now decides whether a returned unit is stock again. The
+-- resellable verdict alone is not enough: a shirt away at the tailor is not
+-- on the shelf.
+insert into return_items (order_line_id, quantity, reason_code, is_resellable, status_code)
+values ('ffff0000-0000-0000-0000-000000000001',2,'seam_puckering',false,'written_off'),
+       ('ffff0000-0000-0000-0000-000000000002',1,'changed_mind',true,'restocked');
 
 insert into contracts (id, title, type_code, status_code, vendor_id, value_amount, expires_on)
 values ('99990000-0000-0000-0000-000000000001','CMT rate card','job_work','active',
@@ -280,8 +283,20 @@ console.log('\nbatch economics arithmetic:');
   ok('size M on hand = 18', inv.units_on_hand === 18, `got ${inv.units_on_hand}`);
   const invL = (await as(OWNER, () => db.query(
     `select * from v_batch_size_inventory where size_code='L'`))).rows[0];
-  //  30 produced - 20 sold + 1 resellable return = 11
-  ok('size L on hand = 11 (resellable return re-enters stock)', invL.units_on_hand === 11, `got ${invL.units_on_hand}`);
+  //  30 produced - 20 sold + 1 restocked return = 11
+  ok('size L on hand = 11 (restocked return re-enters stock)', invL.units_on_hand === 11, `got ${invL.units_on_hand}`);
+
+  // The other half of the rule: a unit out for repair is resellable in
+  // principle but must not be counted as stock while it is away.
+  await db.query(`update return_items set status_code = 'repairing'
+                   where order_line_id = 'ffff0000-0000-0000-0000-000000000002'`);
+  const repairing = (await db.query(
+    `select units_on_hand, units_in_repair from v_batch_size_inventory
+      where batch_id = 'dddd0000-0000-0000-0000-000000000001' and size_code = 'L'`)).rows[0];
+  ok('a unit out for repair leaves stock', repairing.units_on_hand === 10, `got ${repairing.units_on_hand}`);
+  ok('and is counted as in repair', repairing.units_in_repair === 1, `got ${repairing.units_in_repair}`);
+  await db.query(`update return_items set status_code = 'restocked'
+                   where order_line_id = 'ffff0000-0000-0000-0000-000000000002'`);
 }
 
 // ---- 8. audit log --------------------------------------------------------------

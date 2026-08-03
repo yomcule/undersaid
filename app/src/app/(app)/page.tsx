@@ -46,18 +46,21 @@ export default async function Overview() {
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
+          href="/tasks"
           label="Open tasks"
           value={String(openTasks.length)}
           hint={overdue ? `${overdue} overdue` : "none overdue"}
         />
-        <Stat label="Batches in flight" value={String(openBatches)} />
+        <Stat href="/batches" label="Batches in flight" value={String(openBatches)} />
         <Stat
+          href="/contracts"
           label="Contracts expiring"
           value={String(renewals.data?.length ?? 0)}
           hint="next 120 days"
         />
         {role?.canSeeFinancials ? (
           <Stat
+            href="/money"
             label="Payable"
             value={new Intl.NumberFormat("en-IN", {
               style: "currency",
