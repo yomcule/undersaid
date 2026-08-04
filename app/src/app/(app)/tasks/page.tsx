@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { PageHeader, Table, Row, Cell, Empty, EditIcon, BinIcon, type Column } from "@/components/ui";
+import { PageHeader, Table, Empty, type Column } from "@/components/ui";
 import { TaskFilters } from "@/components/task-filters";
-import { firstName } from "@/lib/name";
+import { TaskRow } from "@/components/task-row";
 
 async function createTask(formData: FormData) {
   "use server";
@@ -35,6 +34,27 @@ async function archiveTask(formData: FormData) {
   const id = String(formData.get("id"));
   const supabase = await createClient();
   await supabase.from("tasks").update({ archived_at: new Date().toISOString() }).eq("id", id);
+  revalidatePath("/tasks");
+}
+
+async function updateTask(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id"));
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("tasks")
+    .update({
+      title,
+      type_code: String(formData.get("type_code") ?? "") || null,
+      status_code: String(formData.get("status_code") ?? ""),
+      assignee_id: String(formData.get("assignee_id") ?? "") || null,
+      due_on: String(formData.get("due_on") ?? "") || null,
+      priority: Number(formData.get("priority") ?? 3),
+    })
+    .eq("id", id);
   revalidatePath("/tasks");
 }
 
@@ -204,59 +224,15 @@ export default async function TasksPage(props: {
       {tasks && tasks.length > 0 ? (
         <Table head={head} sort={sort} dir={dir} params={carry}>
           {tasks.map((t) => (
-            <Row key={t.id}>
-              <Cell>
-                <Link href={`/tasks/${t.id}`} className="hover:text-indigo">
-                  {t.title}
-                </Link>
-              </Cell>
-              <Cell>
-                <span className="text-iron">{t.type_label ?? "—"}</span>
-              </Cell>
-              <Cell>
-                <span className={t.is_open ? undefined : "text-iron"}>
-                  {t.status_label}
-                </span>
-              </Cell>
-              <Cell>
-                <span className="text-iron">{firstName(t.assignee_name) ?? "—"}</span>
-              </Cell>
-              <Cell mono>
-                <span className={t.is_overdue ? "text-madder" : undefined}>
-                  {t.due_on
-                    ? new Date(t.due_on).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "2-digit",
-                      })
-                    : "—"}
-                </span>
-              </Cell>
-              <Cell mono>{t.priority}</Cell>
-              <Cell>
-                <div className="flex items-center gap-4">
-                  <Link
-                    href={`/tasks/${t.id}`}
-                    aria-label="Edit task"
-                    title="Edit"
-                    className="text-iron hover:text-indigo"
-                  >
-                    <EditIcon />
-                  </Link>
-                  <form action={archiveTask}>
-                    <input type="hidden" name="id" value={t.id} />
-                    <button
-                      type="submit"
-                      aria-label="Bin task"
-                      title="Bin"
-                      className="text-iron hover:text-madder"
-                    >
-                      <BinIcon />
-                    </button>
-                  </form>
-                </div>
-              </Cell>
-            </Row>
+            <TaskRow
+              key={t.id}
+              task={t}
+              statuses={statuses ?? []}
+              types={types ?? []}
+              people={people ?? []}
+              updateTask={updateTask}
+              archiveTask={archiveTask}
+            />
           ))}
         </Table>
       ) : (

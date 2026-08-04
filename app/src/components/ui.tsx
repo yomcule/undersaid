@@ -229,6 +229,21 @@ export function BinIcon({ className = "" }: { className?: string }) {
   );
 }
 
+export function SaveIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className={`size-4 ${className}`}
+      aria-hidden="true"
+    >
+      <path d="M4 10l4 4 8-8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Row({ children }: { children: ReactNode }) {
   return <tr className="border-b border-bone/50">{children}</tr>;
 }
