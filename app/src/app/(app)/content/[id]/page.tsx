@@ -1,9 +1,77 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { Code, Empty } from "@/components/ui";
+import { Field, Select } from "@/components/form";
+import { WordCountTextarea } from "@/components/word-count-textarea";
+import { textField } from "@/lib/form-data";
 import { one } from "@/lib/embed";
+
+async function updateFields(formData: FormData) {
+  "use server";
+  const id = String(formData.get("content_id"));
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return;
+
+  const text = (k: string) => textField(formData, k);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("content_items")
+    .update({
+      title,
+      type_code: String(formData.get("type_code") ?? ""),
+      channel_code: text("channel_code"),
+      reviewer_id: text("reviewer_id"),
+      batch_id: text("batch_id"),
+      style_id: text("style_id"),
+    })
+    .eq("id", id);
+  if (error) console.error("[michi] update content fields:", error.message);
+  revalidatePath(`/content/${id}`);
+}
+
+async function archiveContent(formData: FormData) {
+  "use server";
+  const id = String(formData.get("content_id"));
+  const supabase = await createClient();
+  await supabase
+    .from("content_items")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", id);
+  redirect("/content");
+}
+
+async function uploadAttachment(formData: FormData) {
+  "use server";
+  const contentId = String(formData.get("content_id"));
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const path = `content/${contentId}/${Date.now()}-${file.name}`;
+  const { error: uploadError } = await supabase.storage.from("michi").upload(path, file);
+  if (uploadError) {
+    console.error("[michi] upload attachment:", uploadError.message);
+    return;
+  }
+
+  const { error } = await supabase.from("attachments").insert({
+    filename: file.name,
+    storage_path: path,
+    mime_type: file.type || null,
+    size_bytes: file.size,
+    uploaded_by: user?.id ?? null,
+    content_id: contentId,
+  });
+  if (error) console.error("[michi] record attachment:", error.message);
+  revalidatePath(`/content/${contentId}`);
+}
 
 async function saveVersion(formData: FormData) {
   "use server";
@@ -91,7 +159,18 @@ export default async function ContentDetail(props: {
 
   if (!item) notFound();
 
-  const [versionsRes, reviewsRes, transitionsRes, meRes] = await Promise.all([
+  const [
+    versionsRes,
+    reviewsRes,
+    transitionsRes,
+    meRes,
+    typesRes,
+    channelsRes,
+    peopleRes,
+    batchesRes,
+    stylesRes,
+    attachmentsRes,
+  ] = await Promise.all([
     supabase
       .from("content_versions")
       .select("id, version_no, body, created_at, profiles(full_name)")
@@ -104,6 +183,21 @@ export default async function ContentDetail(props: {
       .order("created_at", { ascending: false }),
     supabase.from("content_transitions").select("to_code").eq("from_code", item.status_code),
     supabase.auth.getUser(),
+    supabase.from("content_types").select("code, label").order("sort_order"),
+    supabase.from("sales_channels").select("code, label").order("sort_order"),
+    supabase.from("profiles").select("id, full_name").is("archived_at", null),
+    supabase.from("batches").select("id, batch_code").is("archived_at", null).order("batch_code"),
+    supabase
+      .from("styles")
+      .select("id, style_code, name")
+      .is("archived_at", null)
+      .order("style_code"),
+    supabase
+      .from("attachments")
+      .select("id, filename, storage_path, mime_type, size_bytes, created_at")
+      .eq("content_id", id)
+      .is("archived_at", null)
+      .order("created_at", { ascending: false }),
   ]);
 
   for (const [n, r] of [
@@ -117,6 +211,18 @@ export default async function ContentDetail(props: {
   const reviews = reviewsRes.data ?? [];
   const nextStates = (transitionsRes.data ?? []).map((t) => t.to_code);
   const me = meRes.data.user?.id;
+
+  // The bucket is private, so a plain public URL would 400 — sign each file
+  // for this render rather than storing a URL that would eventually expire
+  // anyway.
+  const attachments = await Promise.all(
+    (attachmentsRes.data ?? []).map(async (a) => {
+      const { data: signed } = await supabase.storage
+        .from("michi")
+        .createSignedUrl(a.storage_path, 3600);
+      return { ...a, url: signed?.signedUrl ?? null };
+    }),
+  );
 
   const canPublish =
     item.approved_version !== null && item.approved_version === item.current_version;
@@ -154,18 +260,68 @@ export default async function ContentDetail(props: {
               {item.current_version + 1} and, if this was approved, sends it back to
               draft for another read.
             </p>
-            <textarea
+            <WordCountTextarea
               id="body"
               name="body"
               rows={8}
               defaultValue={item.current_body ?? ""}
-              className="w-full border border-bone bg-transparent p-4
-                         focus:border-indigo focus:outline-none"
             />
             <button type="submit" className="self-start bg-indigo px-6 py-4 text-kora">
               Save as v{item.current_version + 1}
             </button>
           </form>
+
+          {/* ---- attachments ---- */}
+          <section className="mt-24 border-t border-bone pt-16">
+            <h2>Attachments</h2>
+            <p className="measure mt-4 text-sm text-iron">
+              Images, copy documents, video — anything this piece needs beside
+              the text above.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-6">
+              {attachments.length === 0 ? (
+                <Empty>No attachments yet.</Empty>
+              ) : (
+                attachments.map((a) => (
+                  <div key={a.id} className="flex flex-col gap-2">
+                    {a.url && a.mime_type?.startsWith("image/") ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- signed URL, not a static asset Next can optimise.
+                      <img
+                        src={a.url}
+                        alt={a.filename}
+                        className="max-h-64 max-w-full border border-bone object-contain"
+                      />
+                    ) : a.url && a.mime_type?.startsWith("video/") ? (
+                      <video src={a.url} controls className="max-h-64 max-w-full border border-bone" />
+                    ) : null}
+                    <a
+                      href={a.url ?? "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm hover:text-indigo"
+                    >
+                      {a.filename}
+                    </a>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <form action={uploadAttachment} className="mt-8 flex flex-wrap items-end gap-4">
+              <input type="hidden" name="content_id" value={item.id} />
+              <input
+                type="file"
+                name="file"
+                required
+                className="text-sm file:mr-4 file:border file:border-bone file:bg-transparent
+                           file:px-4 file:py-2 file:text-ink"
+              />
+              <button type="submit" className="border border-bone px-6 py-2 text-ink hover:border-indigo">
+                Upload
+              </button>
+            </form>
+          </section>
 
           {/* ---- review ---- */}
           {item.status_code === "in_review" ? (
@@ -312,6 +468,87 @@ export default async function ContentDetail(props: {
               <p className="mt-2">Published {when(item.published_at)}</p>
             ) : null}
           </div>
+
+          {/* ---- edit fields ---- */}
+          <form action={updateFields} className="flex flex-col gap-4 border-t border-bone pt-8">
+            <input type="hidden" name="content_id" value={item.id} />
+            <p className="label">Details</p>
+
+            <Field label="Title">
+              <input
+                name="title"
+                defaultValue={item.title}
+                required
+                className="w-full border-b border-bone bg-transparent pb-2
+                           focus:border-indigo focus:outline-none"
+              />
+            </Field>
+
+            <Field label="Type">
+              <Select name="type_code" defaultValue={item.type_code}>
+                {(typesRes.data ?? []).map((t) => (
+                  <option key={t.code} value={t.code}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Channel">
+              <Select name="channel_code" defaultValue={item.channel_code ?? ""}>
+                <option value="">—</option>
+                {(channelsRes.data ?? []).map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Reviewer">
+              <Select name="reviewer_id" defaultValue={item.reviewer_id ?? ""}>
+                <option value="">—</option>
+                {(peopleRes.data ?? []).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Batch">
+              <Select name="batch_id" defaultValue={item.batch_id ?? ""}>
+                <option value="">—</option>
+                {(batchesRes.data ?? []).map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.batch_code}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Style">
+              <Select name="style_id" defaultValue={item.style_id ?? ""}>
+                <option value="">—</option>
+                {(stylesRes.data ?? []).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.style_code} — {s.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <button type="submit" className="label self-start hover:text-ink">
+              Save details
+            </button>
+          </form>
+
+          <form action={archiveContent} className="border-t border-bone pt-8">
+            <input type="hidden" name="content_id" value={item.id} />
+            <button type="submit" className="label hover:text-madder">
+              Bin this item
+            </button>
+          </form>
         </aside>
       </div>
     </>

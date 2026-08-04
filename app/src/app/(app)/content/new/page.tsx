@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui";
-import { Field, Input, Select, Textarea, Submit, FormGrid } from "@/components/form";
+import { Field, Input, Select, Submit, FormGrid } from "@/components/form";
+import { WordCountTextarea } from "@/components/word-count-textarea";
 
 async function createContent(formData: FormData) {
   "use server";
@@ -149,7 +150,7 @@ export default async function NewContentPage() {
           </Field>
 
           <Field label="First draft" htmlFor="body" span={2}>
-            <Textarea id="body" name="body" rows={10} />
+            <WordCountTextarea id="body" name="body" rows={10} />
           </Field>
         </FormGrid>
 
