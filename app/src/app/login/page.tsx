@@ -82,58 +82,42 @@ export default async function LoginPage(props: {
           <p className="measure text-center text-iron">
             Check your email. The link signs you in and expires shortly.
           </p>
+        ) : googleEnabled ? (
+          // The one Indigo element in this view.
+          <form action={signInWithGoogle}>
+            <button
+              type="submit"
+              className="flex w-full items-center justify-center gap-4 bg-indigo px-6 py-4
+                         text-kora transition-opacity hover:opacity-90"
+            >
+              <GoogleMark />
+              Continue with Google
+            </button>
+          </form>
         ) : (
-          <>
-            {googleEnabled ? (
-              <>
-                {/* The one Indigo element in this view. */}
-                <form action={signInWithGoogle}>
-                  <button
-                    type="submit"
-                    className="flex w-full items-center justify-center gap-4 bg-indigo px-6 py-4
-                               text-kora transition-opacity hover:opacity-90"
-                  >
-                    <GoogleMark />
-                    Continue with Google
-                  </button>
-                </form>
-
-                <div className="my-8 flex items-center gap-4">
-                  <span className="h-px flex-1 bg-bone" />
-                  <span className="label">or</span>
-                  <span className="h-px flex-1 bg-bone" />
-                </div>
-              </>
-            ) : null}
-
-            <form action={signInWithEmail} className="flex flex-col gap-4">
-              <label htmlFor="email" className="label">
-                Email link
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                autoComplete="email"
-                className="w-full border border-bone bg-transparent px-4 py-4
-                           text-ink placeholder:text-selvedge
-                           focus:border-indigo focus:outline-none"
-              />
-              {/* Exactly one Indigo element per view: whichever action is
-                  primary here depends on whether Google is available. */}
-              <button
-                type="submit"
-                className={
-                  googleEnabled
-                    ? "border border-bone px-6 py-4 text-ink transition-colors hover:border-indigo"
-                    : "bg-indigo px-6 py-4 text-kora transition-opacity hover:opacity-90"
-                }
-              >
-                Send sign-in link
-              </button>
-            </form>
-          </>
+          // Local-dev fallback only: the one route that works without Google
+          // OAuth credentials configured. Hidden whenever Google is available.
+          <form action={signInWithEmail} className="flex flex-col gap-4">
+            <label htmlFor="email" className="label">
+              Email link
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className="w-full border border-bone bg-transparent px-4 py-4
+                         text-ink placeholder:text-selvedge
+                         focus:border-indigo focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="bg-indigo px-6 py-4 text-kora transition-opacity hover:opacity-90"
+            >
+              Send sign-in link
+            </button>
+          </form>
         )}
 
         <p className="mt-16 text-center text-sm text-iron">
