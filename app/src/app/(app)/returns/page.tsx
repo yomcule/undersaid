@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { PageHeader, Table, Row, Cell, Empty, Money, Code } from "@/components/ui";
+import { PageHeader, Empty, Money, Code } from "@/components/ui";
 
 async function advance(formData: FormData) {
   "use server";

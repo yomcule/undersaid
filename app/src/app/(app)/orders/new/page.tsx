@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui";
 import { Field, Input, NumberInput, Select, Textarea, Submit, FormGrid } from "@/components/form";
+import { textField, numberField } from "@/lib/form-data";
 
 const LINE_ROWS = 6;
 
@@ -12,11 +13,8 @@ async function createOrder(formData: FormData) {
   const orderRef = String(formData.get("order_ref") ?? "").trim();
   if (!orderRef) return;
 
-  const text = (k: string) => String(formData.get(k) ?? "").trim() || null;
-  const num = (k: string) => {
-    const v = String(formData.get(k) ?? "").trim();
-    return v === "" ? 0 : Number(v);
-  };
+  const text = (k: string) => textField(formData, k);
+  const num = (k: string) => numberField(formData, k) ?? 0;
 
   // One combined "batch_id::size_code" value per row, chosen from stock that
   // actually exists — the composite FK on order_lines would reject anything

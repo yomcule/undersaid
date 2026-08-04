@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { PageHeader, Table, Row, Cell, Empty, Money, Code } from "@/components/ui";
+import { PageHeader, Table, Row, Cell, Empty, Money } from "@/components/ui";
 import { Field, Input, NumberInput, Select, Submit, FormGrid } from "@/components/form";
 import { one } from "@/lib/embed";
 import { getRole } from "@/lib/role";
+import { textField, numberField } from "@/lib/form-data";
 
 async function addLot(formData: FormData) {
   "use server";
@@ -11,11 +12,8 @@ async function addLot(formData: FormData) {
   const vendorId = String(formData.get("vendor_id") ?? "");
   if (!lotCode || !vendorId) return;
 
-  const num = (k: string) => {
-    const v = String(formData.get(k) ?? "").trim();
-    return v === "" ? null : Number(v);
-  };
-  const text = (k: string) => String(formData.get(k) ?? "").trim() || null;
+  const num = (k: string) => numberField(formData, k);
+  const text = (k: string) => textField(formData, k);
 
   const supabase = await createClient();
   const { error } = await supabase.from("fabric_lots").insert({

@@ -165,10 +165,13 @@ export function Table({
               }
               const active = sort === h.column;
               return (
-                <th key={h.column} className="py-4 pr-8">
+                <th
+                  key={h.column}
+                  className="py-4 pr-8"
+                  aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}
+                >
                   <a
                     href={hrefFor(h.column)}
-                    aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}
                     className={`label inline-flex items-center gap-1 ${
                       active ? "text-ink" : "hover:text-ink"
                     }`}

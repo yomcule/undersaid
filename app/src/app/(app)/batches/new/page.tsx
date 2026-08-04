@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui";
 import { Field, Input, NumberInput, Select, Textarea, Submit, FormGrid } from "@/components/form";
+import { textField, numberField } from "@/lib/form-data";
 
 async function createBatch(formData: FormData) {
   "use server";
@@ -11,11 +12,8 @@ async function createBatch(formData: FormData) {
   const styleId = String(formData.get("style_id") ?? "");
   if (!code || !styleId) return;
 
-  const text = (k: string) => String(formData.get(k) ?? "").trim() || null;
-  const num = (k: string) => {
-    const v = String(formData.get(k) ?? "").trim();
-    return v === "" ? null : Number(v);
-  };
+  const text = (k: string) => textField(formData, k);
+  const num = (k: string) => numberField(formData, k);
 
   const supabase = await createClient();
   const {

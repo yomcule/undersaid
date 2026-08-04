@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Table, Row, Cell, Empty, Code } from "@/components/ui";
+import { PageHeader, Table, Row, Cell, Empty } from "@/components/ui";
 
 function fmt(d: string | null) {
   if (!d) return "—";

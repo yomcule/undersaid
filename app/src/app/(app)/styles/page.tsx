@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { PageHeader, Table, Row, Cell, Empty, Money } from "@/components/ui";
 import { Field, Input, NumberInput, Textarea, Submit, FormGrid } from "@/components/form";
+import { textField } from "@/lib/form-data";
 
 async function addStyle(formData: FormData) {
   "use server";
@@ -9,7 +10,7 @@ async function addStyle(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!code || !name) return;
 
-  const text = (k: string) => String(formData.get(k) ?? "").trim() || null;
+  const text = (k: string) => textField(formData, k);
   const price = String(formData.get("target_price") ?? "").trim();
 
   const supabase = await createClient();
