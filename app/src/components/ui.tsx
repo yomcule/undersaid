@@ -194,6 +194,41 @@ export function Table({
   );
 }
 
+export function EditIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className={`size-4 ${className}`}
+      aria-hidden="true"
+    >
+      <path
+        d="M13.5 3.5 16.5 6.5 6.5 16.5H3.5V13.5L13.5 3.5Z"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function BinIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className={`size-4 ${className}`}
+      aria-hidden="true"
+    >
+      <path d="M4 6h12" strokeLinecap="round" />
+      <path d="M8 6V4.5h4V6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5.5 6l.7 9.5A1 1 0 0 0 7.2 16.5h5.6a1 1 0 0 0 1-.9l.7-9.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Row({ children }: { children: ReactNode }) {
   return <tr className="border-b border-bone/50">{children}</tr>;
 }

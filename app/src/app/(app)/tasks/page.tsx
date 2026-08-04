@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { PageHeader, Table, Row, Cell, Empty, type Column } from "@/components/ui";
+import { PageHeader, Table, Row, Cell, Empty, EditIcon, BinIcon, type Column } from "@/components/ui";
 import { TaskFilters } from "@/components/task-filters";
+import { firstName } from "@/lib/name";
 
 async function createTask(formData: FormData) {
   "use server";
@@ -218,7 +219,7 @@ export default async function TasksPage(props: {
                 </span>
               </Cell>
               <Cell>
-                <span className="text-iron">{t.assignee_name ?? "—"}</span>
+                <span className="text-iron">{firstName(t.assignee_name) ?? "—"}</span>
               </Cell>
               <Cell mono>
                 <span className={t.is_overdue ? "text-madder" : undefined}>
@@ -233,12 +234,27 @@ export default async function TasksPage(props: {
               </Cell>
               <Cell mono>{t.priority}</Cell>
               <Cell>
-                <form action={archiveTask}>
-                  <input type="hidden" name="id" value={t.id} />
-                  <button type="submit" className="label hover:text-madder">
-                    Bin
-                  </button>
-                </form>
+                <div className="flex items-center gap-4">
+                  <Link
+                    href={`/tasks/${t.id}`}
+                    aria-label="Edit task"
+                    title="Edit"
+                    className="text-iron hover:text-indigo"
+                  >
+                    <EditIcon />
+                  </Link>
+                  <form action={archiveTask}>
+                    <input type="hidden" name="id" value={t.id} />
+                    <button
+                      type="submit"
+                      aria-label="Bin task"
+                      title="Bin"
+                      className="text-iron hover:text-madder"
+                    >
+                      <BinIcon />
+                    </button>
+                  </form>
+                </div>
               </Cell>
             </Row>
           ))}
