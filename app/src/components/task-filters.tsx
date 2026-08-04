@@ -12,9 +12,11 @@ type Option = { value: string; label: string };
 export function TaskFilters({
   statuses,
   assignees,
+  types,
 }: {
   statuses: Option[];
   assignees: Option[];
+  types: Option[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -28,10 +30,13 @@ export function TaskFilters({
   }
 
   const active =
-    params.get("status") || params.get("assignee") || params.get("priority");
+    params.get("status") ||
+    params.get("assignee") ||
+    params.get("priority") ||
+    params.get("type");
 
   return (
-    <div className="mb-16 flex flex-wrap items-end gap-8">
+    <div className="mb-8 flex flex-wrap items-end gap-8">
       <Select
         label="Status"
         value={params.get("status") ?? "open"}
@@ -60,6 +65,12 @@ export function TaskFilters({
           { value: "", label: "Any" },
           ...[1, 2, 3, 4, 5].map((p) => ({ value: String(p), label: String(p) })),
         ]}
+      />
+      <Select
+        label="Type"
+        value={params.get("type") ?? ""}
+        onChange={(v) => set("type", v)}
+        options={[{ value: "", label: "Any" }, ...types]}
       />
 
       {active ? (

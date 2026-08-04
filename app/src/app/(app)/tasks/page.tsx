@@ -15,13 +15,25 @@ async function createTask(formData: FormData) {
   } = await supabase.auth.getUser();
 
   const due = String(formData.get("due_on") ?? "");
+  const assignee = String(formData.get("assignee_id") ?? "");
+  const type = String(formData.get("type_code") ?? "");
   await supabase.from("tasks").insert({
     title,
     due_on: due || null,
+    assignee_id: assignee || null,
+    type_code: type || null,
     priority: Number(formData.get("priority") ?? 3),
     created_by: user?.id ?? null,
   });
 
+  revalidatePath("/tasks");
+}
+
+async function archiveTask(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id"));
+  const supabase = await createClient();
+  await supabase.from("tasks").update({ archived_at: new Date().toISOString() }).eq("id", id);
   revalidatePath("/tasks");
 }
 
@@ -57,6 +69,7 @@ export default async function TasksPage(props: {
   else if (sp.assignee) query = query.eq("assignee_id", sp.assignee);
 
   if (sp.priority) query = query.eq("priority", Number(sp.priority));
+  if (sp.type) query = query.eq("type_code", sp.type);
 
   const { data: tasks, error } = await query
     .order(sort, { ascending: dir === "asc", nullsFirst: false })
@@ -65,41 +78,42 @@ export default async function TasksPage(props: {
 
   if (error) console.error("[michi] tasks:", error.message);
 
-  const [{ data: statuses }, { data: people }] = await Promise.all([
+  const [{ data: statuses }, { data: people }, { data: types }] = await Promise.all([
     supabase.from("task_statuses").select("code, label").order("sort_order"),
     supabase.from("profiles").select("id, full_name").is("archived_at", null),
+    supabase.from("task_types").select("code, label").order("sort_order"),
   ]);
 
   const head: Column[] = [
     { label: "Task", column: "title" },
+    { label: "Type", column: "type_code" },
     { label: "Status", column: "status_sort" },
     { label: "Assignee", column: "assignee_name" },
     { label: "Due", column: "due_on" },
     { label: "Priority", column: "priority" },
+    "",
   ];
 
   const carry = {
     status: sp.status,
     assignee: sp.assignee,
     priority: sp.priority,
+    type: sp.type,
   };
 
   return (
     <>
-      <PageHeader
-        eyebrow="Tasks"
-        title="Work"
-        lede="Closed tasks are archived, never deleted — the schema has no DELETE path at all."
-      />
+      <PageHeader eyebrow="Tasks" title="Work" />
 
       <TaskFilters
         statuses={(statuses ?? []).map((s) => ({ value: s.code, label: s.label }))}
         assignees={(people ?? []).map((p) => ({ value: p.id, label: p.full_name }))}
+        types={(types ?? []).map((t) => ({ value: t.code, label: t.label }))}
       />
 
       <form
         action={createTask}
-        className="mb-16 flex flex-wrap items-end gap-4 border-b border-bone pb-8"
+        className="mb-12 flex flex-wrap items-end gap-4 border-b border-bone pb-6"
       >
         <div className="flex min-w-64 flex-1 flex-col gap-2">
           <label htmlFor="title" className="label">
@@ -109,9 +123,47 @@ export default async function TasksPage(props: {
             id="title"
             name="title"
             required
-            className="border border-bone bg-transparent px-4 py-4
+            className="border border-bone bg-transparent px-4 py-3
                        focus:border-indigo focus:outline-none"
           />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="type_code" className="label">
+            Type
+          </label>
+          <select
+            id="type_code"
+            name="type_code"
+            defaultValue=""
+            className="data border border-bone bg-transparent px-4 py-3
+                       focus:border-indigo focus:outline-none"
+          >
+            <option value="">—</option>
+            {(types ?? []).map((t) => (
+              <option key={t.code} value={t.code}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="assignee_id" className="label">
+            Assignee
+          </label>
+          <select
+            id="assignee_id"
+            name="assignee_id"
+            defaultValue=""
+            className="border border-bone bg-transparent px-4 py-3
+                       focus:border-indigo focus:outline-none"
+          >
+            <option value="">—</option>
+            {(people ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="due_on" className="label">
@@ -121,7 +173,7 @@ export default async function TasksPage(props: {
             id="due_on"
             name="due_on"
             type="date"
-            className="data border border-bone bg-transparent px-4 py-4
+            className="data border border-bone bg-transparent px-4 py-3
                        focus:border-indigo focus:outline-none"
           />
         </div>
@@ -133,7 +185,7 @@ export default async function TasksPage(props: {
             id="priority"
             name="priority"
             defaultValue="3"
-            className="data border border-bone bg-transparent px-4 py-4
+            className="data border border-bone bg-transparent px-4 py-3
                        focus:border-indigo focus:outline-none"
           >
             {[1, 2, 3, 4, 5].map((p) => (
@@ -143,7 +195,7 @@ export default async function TasksPage(props: {
             ))}
           </select>
         </div>
-        <button type="submit" className="bg-indigo px-6 py-4 text-kora">
+        <button type="submit" className="bg-indigo px-6 py-3 text-kora">
           Add
         </button>
       </form>
@@ -156,6 +208,9 @@ export default async function TasksPage(props: {
                 <Link href={`/tasks/${t.id}`} className="hover:text-indigo">
                   {t.title}
                 </Link>
+              </Cell>
+              <Cell>
+                <span className="text-iron">{t.type_label ?? "—"}</span>
               </Cell>
               <Cell>
                 <span className={t.is_open ? undefined : "text-iron"}>
@@ -177,6 +232,14 @@ export default async function TasksPage(props: {
                 </span>
               </Cell>
               <Cell mono>{t.priority}</Cell>
+              <Cell>
+                <form action={archiveTask}>
+                  <input type="hidden" name="id" value={t.id} />
+                  <button type="submit" className="label hover:text-madder">
+                    Bin
+                  </button>
+                </form>
+              </Cell>
             </Row>
           ))}
         </Table>

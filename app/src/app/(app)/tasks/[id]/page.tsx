@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { Code, Empty } from "@/components/ui";
@@ -12,7 +12,7 @@ async function updateTask(formData: FormData) {
 
   // Only fields actually present in the submitted form are touched, so the
   // sidebar's small forms cannot blank out each other's values.
-  for (const key of ["status_code", "priority", "assignee_id", "due_on", "description"]) {
+  for (const key of ["status_code", "priority", "assignee_id", "due_on", "description", "type_code"]) {
     if (!formData.has(key)) continue;
     const raw = String(formData.get(key) ?? "");
     patch[key] =
@@ -22,6 +22,14 @@ async function updateTask(formData: FormData) {
   const supabase = await createClient();
   await supabase.from("tasks").update(patch).eq("id", id);
   revalidatePath(`/tasks/${id}`);
+}
+
+async function archiveTask(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id"));
+  const supabase = await createClient();
+  await supabase.from("tasks").update({ archived_at: new Date().toISOString() }).eq("id", id);
+  redirect("/tasks");
 }
 
 async function addComment(formData: FormData) {
@@ -108,10 +116,11 @@ export default async function TaskDetail(props: {
 
   if (!task) notFound();
 
-  const [{ data: statuses }, { data: people }, commentsRes, { data: context }] =
+  const [{ data: statuses }, { data: people }, { data: types }, commentsRes, { data: context }] =
     await Promise.all([
       supabase.from("task_statuses").select("code, label").order("sort_order"),
       supabase.from("profiles").select("id, full_name").is("archived_at", null),
+      supabase.from("task_types").select("code, label").order("sort_order"),
       supabase
         .from("comments")
         .select(
@@ -154,6 +163,12 @@ export default async function TaskDetail(props: {
             <span>{task.status_label}</span>
             <span className="text-bone">·</span>
             <Code>P{task.priority}</Code>
+            {task.type_label ? (
+              <>
+                <span className="text-bone">·</span>
+                <span>{task.type_label}</span>
+              </>
+            ) : null}
             {task.is_overdue ? (
               <>
                 <span className="text-bone">·</span>
@@ -239,6 +254,17 @@ export default async function TaskDetail(props: {
             </AutoForm>
           </Field>
 
+          <Field label="Type">
+            <AutoForm taskId={task.id} name="type_code" value={task.type_code ?? ""}>
+              <option value="">—</option>
+              {(types ?? []).map((t) => (
+                <option key={t.code} value={t.code}>
+                  {t.label}
+                </option>
+              ))}
+            </AutoForm>
+          </Field>
+
           <Field label="Assignee">
             <AutoForm taskId={task.id} name="assignee_id" value={task.assignee_id ?? ""}>
               <option value="">Unassigned</option>
@@ -284,6 +310,13 @@ export default async function TaskDetail(props: {
             ) : null}
             <p className="mt-2">Due {fmtDate(task.due_on)}</p>
           </div>
+
+          <form action={archiveTask} className="border-t border-bone pt-8">
+            <input type="hidden" name="id" value={task.id} />
+            <button type="submit" className="label hover:text-madder">
+              Bin this task
+            </button>
+          </form>
         </aside>
       </div>
     </>
