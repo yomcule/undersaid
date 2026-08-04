@@ -158,7 +158,7 @@ export function Table({
             {head.map((h, i) => {
               if (typeof h === "string") {
                 return (
-                  <th key={h || i} className="label py-4 pr-8 font-medium">
+                  <th key={h || i} className="label py-3 pr-6 font-medium">
                     {h}
                   </th>
                 );
@@ -167,7 +167,7 @@ export function Table({
               return (
                 <th
                   key={h.column}
-                  className="py-4 pr-8"
+                  className="py-3 pr-6"
                   aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}
                 >
                   <a
@@ -251,11 +251,15 @@ export function Row({ children }: { children: ReactNode }) {
 export function Cell({
   children,
   mono = false,
+  nowrap = false,
 }: {
   children: ReactNode;
   mono?: boolean;
+  nowrap?: boolean;
 }) {
   return (
-    <td className={`py-4 pr-8 align-top ${mono ? "data" : ""}`}>{children}</td>
+    <td className={`py-3 pr-6 align-top ${mono ? "data" : ""} ${nowrap ? "whitespace-nowrap" : ""}`}>
+      {children}
+    </td>
   );
 }

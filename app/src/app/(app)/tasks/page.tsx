@@ -58,6 +58,18 @@ async function updateTask(formData: FormData) {
   revalidatePath("/tasks");
 }
 
+async function toggleDone(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id"));
+  const done = String(formData.get("done")) === "true";
+  const supabase = await createClient();
+  await supabase
+    .from("tasks")
+    .update({ status_code: done ? "done" : "todo" })
+    .eq("id", id);
+  revalidatePath("/tasks");
+}
+
 // Only these are sortable, so a hand-edited ?sort= cannot reach an arbitrary
 // column. PostgREST would reject an unknown name anyway; an allowlist keeps
 // the failure in our code rather than as a 400 from the database.
@@ -232,6 +244,7 @@ export default async function TasksPage(props: {
               people={people ?? []}
               updateTask={updateTask}
               archiveTask={archiveTask}
+              toggleDone={toggleDone}
             />
           ))}
         </Table>

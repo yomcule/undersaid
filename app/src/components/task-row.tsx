@@ -39,6 +39,7 @@ export function TaskRow({
   people,
   updateTask,
   archiveTask,
+  toggleDone,
 }: {
   task: Task;
   statuses: Option[];
@@ -46,9 +47,11 @@ export function TaskRow({
   people: Person[];
   updateTask: (formData: FormData) => void;
   archiveTask: (formData: FormData) => void;
+  toggleDone: (formData: FormData) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [done, setDone] = useState(task.status_code === "done");
   const [title, setTitle] = useState(task.title);
   const [typeCode, setTypeCode] = useState(task.type_code ?? "");
   const [statusCode, setStatusCode] = useState(task.status_code);
@@ -83,23 +86,44 @@ export function TaskRow({
     setEditing(false);
   }
 
+  function handleToggleDone(checked: boolean) {
+    setDone(checked);
+    const fd = new FormData();
+    fd.set("id", task.id);
+    fd.set("done", String(checked));
+    startTransition(() => toggleDone(fd));
+  }
+
   return (
     <Row>
-      <Cell>
-        {editing ? (
+      <Cell nowrap>
+        <div className="flex items-center gap-3">
           <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className={fieldCls}
-            aria-label="Title"
+            type="checkbox"
+            checked={done}
+            onChange={(e) => handleToggleDone(e.target.checked)}
+            aria-label={done ? "Mark not done" : "Mark done"}
+            title={done ? "Mark not done" : "Mark done"}
+            className="size-4 accent-indigo"
           />
-        ) : (
-          <Link href={`/tasks/${task.id}`} className="hover:text-indigo">
-            {task.title}
-          </Link>
-        )}
+          {editing ? (
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className={fieldCls}
+              aria-label="Title"
+            />
+          ) : (
+            <Link
+              href={`/tasks/${task.id}`}
+              className={`hover:text-indigo ${done ? "text-iron line-through" : ""}`}
+            >
+              {task.title}
+            </Link>
+          )}
+        </div>
       </Cell>
-      <Cell>
+      <Cell nowrap>
         {editing ? (
           <select
             value={typeCode}
@@ -118,7 +142,7 @@ export function TaskRow({
           <span className="text-iron">{task.type_label ?? "—"}</span>
         )}
       </Cell>
-      <Cell>
+      <Cell nowrap>
         {editing ? (
           <select
             value={statusCode}
@@ -136,7 +160,7 @@ export function TaskRow({
           <span className={task.is_open ? undefined : "text-iron"}>{task.status_label}</span>
         )}
       </Cell>
-      <Cell>
+      <Cell nowrap>
         {editing ? (
           <select
             value={assigneeId}
@@ -155,7 +179,7 @@ export function TaskRow({
           <span className="text-iron">{firstName(task.assignee_name) ?? "—"}</span>
         )}
       </Cell>
-      <Cell mono>
+      <Cell mono nowrap>
         {editing ? (
           <input
             type="date"
