@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { PageHeader, Empty, Money, Code } from "@/components/ui";
@@ -56,11 +57,19 @@ export default async function ReturnsPage(props: {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Aftercare"
-        title="Returns & repairs"
-        lede="A garment away at the tailor is not stock. Only a return marked Restocked counts towards inventory again."
-      />
+      <div className="flex items-start justify-between gap-8">
+        <PageHeader
+          eyebrow="Aftercare"
+          title="Returns & repairs"
+          lede="A garment away at the tailor is not stock. Only a return marked Restocked counts towards inventory again."
+        />
+        <Link
+          href="/returns/new"
+          className="shrink-0 bg-indigo px-6 py-4 text-kora hover:opacity-90"
+        >
+          New return
+        </Link>
+      </div>
 
       <div className="mb-16 flex flex-wrap gap-12 border-b border-bone pb-8">
         <Figure label="Open" value={String(open)} />

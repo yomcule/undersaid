@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Table, Row, Cell, Empty } from "@/components/ui";
 
@@ -28,11 +29,19 @@ export default async function LogisticsPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Operations"
-        title="Logistics"
-        lede="What is being made and who is making it; what is moving and who is chasing it."
-      />
+      <div className="flex items-start justify-between gap-8">
+        <PageHeader
+          eyebrow="Operations"
+          title="Logistics"
+          lede="What is being made and who is making it; what is moving and who is chasing it."
+        />
+        <Link
+          href="/logistics/new"
+          className="shrink-0 bg-indigo px-6 py-4 text-kora hover:opacity-90"
+        >
+          New shipment
+        </Link>
+      </div>
 
       {late.length > 0 ? (
         <p className="measure mb-16 border-l-2 border-madder pl-6 text-madder">
