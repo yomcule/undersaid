@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Table, Row, Cell, Empty, Money } from "@/components/ui";
@@ -54,8 +55,6 @@ export default async function MoneyPage() {
   const outgoing = (categories ?? []).filter((c) => OUTGOING_KINDS.has(c.kind_code));
   const incoming = (categories ?? []).filter((c) => INCOMING_KINDS.has(c.kind_code));
 
-  const nothingVisible = !payables?.length && !renewals?.length;
-
   return (
     <>
       <PageHeader
@@ -64,21 +63,33 @@ export default async function MoneyPage() {
         lede="Amounts are tax-exclusive. Input GST is recoverable, so counting it as cost would overstate every margin in the system."
       />
 
-      {nothingVisible ? (
+      {!role?.canSeeFinancials ? (
         <Empty>
-          Nothing to show. If you expected figures here, your role may not
-          include financial access.
+          Nothing to show. Your role does not include financial access.
         </Empty>
       ) : null}
 
-      {payables?.length ? (
+      {role?.canSeeFinancials ? (
         <section className="mb-24">
-          <h2>Payable</h2>
-          <div className="mt-8">
-            <Table head={["Vendor", "Bill", "Due", "Gross", "Paid", "Outstanding"]}>
+          <div className="flex items-center justify-between gap-8">
+            <h2>Payable</h2>
+            <Link href="/vendors/bills/new" className="label hover:text-ink">
+              New bill
+            </Link>
+          </div>
+
+          {!payables?.length ? (
+            <Empty>Nothing outstanding.</Empty>
+          ) : (
+            <div className="mt-8">
+              <Table head={["Vendor", "Bill", "Due", "Gross", "Paid", "Outstanding"]}>
               {payables.map((p) => (
                 <Row key={p.bill_id}>
-                  <Cell>{p.vendor_name}</Cell>
+                  <Cell>
+                    <Link href={`/vendors/bills/${p.bill_id}`} className="hover:text-indigo">
+                      {p.vendor_name}
+                    </Link>
+                  </Cell>
                   <Cell mono>{p.bill_no}</Cell>
                   <Cell mono>
                     <span className={p.is_overdue ? "text-madder" : undefined}>
@@ -96,8 +107,9 @@ export default async function MoneyPage() {
                   <Cell mono><Money amount={p.outstanding_amount} /></Cell>
                 </Row>
               ))}
-            </Table>
-          </div>
+              </Table>
+            </div>
+          )}
         </section>
       ) : null}
 
