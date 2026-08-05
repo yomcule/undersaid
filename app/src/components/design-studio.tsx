@@ -29,7 +29,7 @@ function defaultsFor(layout: Layout) {
       size: slot.defaultSize,
       color: slot.defaultColor,
       align: slot.align,
-      valign: "top",
+      valign: slot.defaultValign ?? "top",
     };
   }
   const colors: Record<string, string> = {};
@@ -223,7 +223,7 @@ export function DesignStudio() {
             type="button"
             onClick={() => selectLayout(l)}
             className={`border px-4 py-3 text-left transition-colors ${
-              l.id === layoutId ? "border-indigo text-ink" : "border-bone text-iron hover:border-indigo"
+              l.id === layoutId ? "border-indigo text-ink" : "border-selvedge text-iron hover:border-indigo"
             }`}
           >
             <span className="label block">{l.name}</span>
@@ -253,7 +253,7 @@ export function DesignStudio() {
             <select
               value={formatId}
               onChange={(e) => setFormatId(e.target.value as (typeof EXPORT_FORMATS)[number]["id"])}
-              className="w-full max-w-[520px] border-b border-bone bg-transparent pb-2 text-sm focus:border-indigo focus:outline-none"
+              className="w-full max-w-[520px] border border-selvedge bg-kora-deep px-3 py-2 text-sm focus:border-indigo focus:outline-none"
             >
               {EXPORT_FORMATS.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -387,7 +387,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
             className={`size-7 rounded-full border transition-shadow ${
               value.toLowerCase() === s.value.toLowerCase()
                 ? "border-indigo ring-2 ring-indigo ring-offset-2 ring-offset-kora"
-                : "border-bone"
+                : "border-selvedge"
             }`}
           />
         ))}
@@ -417,7 +417,7 @@ function TextControls({
         onChange={(e) => onChange({ content: e.target.value })}
         placeholder={placeholder}
         rows={2}
-        className="w-full border border-bone bg-transparent p-3 text-ink focus:border-indigo focus:outline-none"
+        className="w-full border border-selvedge bg-kora-deep p-3 text-ink focus:border-indigo focus:outline-none"
       />
       <p className="text-sm text-iron">
         Wrap a word or phrase in <span className="data">**bold**</span>, <span className="data">*italic*</span>, or{" "}
@@ -427,7 +427,7 @@ function TextControls({
       <select
         value={value.font}
         onChange={(e) => onChange({ font: e.target.value as FontKey })}
-        className="w-full border-b border-bone bg-transparent pb-2 text-sm focus:border-indigo focus:outline-none"
+        className="w-full border border-selvedge bg-kora-deep px-3 py-2 text-sm focus:border-indigo focus:outline-none"
       >
         {FONT_OPTIONS.map((f) => (
           <option key={f.key} value={f.key}>
@@ -502,7 +502,7 @@ function ToggleButton({
       aria-label={label}
       title={label}
       className={`flex size-8 items-center justify-center border text-sm transition-colors ${
-        active ? "border-indigo bg-indigo text-kora" : "border-bone text-iron hover:border-indigo"
+        active ? "border-indigo bg-indigo text-kora" : "border-selvedge text-iron hover:border-indigo"
       }`}
     >
       {children}

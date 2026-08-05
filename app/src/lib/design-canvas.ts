@@ -14,10 +14,21 @@ export type TextState = {
   valign: "top" | "middle" | "bottom";
 };
 
+// The draw effect re-runs on every keystroke (text, color, size all live in
+// the same effect deps), which would otherwise re-decode an uploaded photo
+// from its data URL on every single character typed. Caching by src means a
+// photo is only ever decoded once.
+const imageCache = new Map<string, HTMLImageElement>();
+
 export function loadImage(src: string): Promise<HTMLImageElement> {
+  const cached = imageCache.get(src);
+  if (cached) return Promise.resolve(cached);
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
+    img.onload = () => {
+      imageCache.set(src, img);
+      resolve(img);
+    };
     img.onerror = reject;
     img.src = src;
   });

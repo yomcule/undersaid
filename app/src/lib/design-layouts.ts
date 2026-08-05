@@ -3,11 +3,14 @@ export type Align = "left" | "center" | "right";
 
 export type ImageSlot = { id: string; label: string; rect: Rect };
 export type Panel = { id: string; label: string; rect: Rect; defaultColor: string };
+export type VAlign = "top" | "middle" | "bottom";
+
 export type TextSlot = {
   id: string;
   label: string;
   rect: Rect;
   align: Align;
+  defaultValign?: VAlign;
   defaultSize: number;
   defaultColor: string;
   placeholder: string;
@@ -67,8 +70,9 @@ export const LAYOUTS: Layout[] = [
       {
         id: "hook",
         label: "Hook",
-        rect: { x: 100, y: 420, w: 880, h: 300 },
+        rect: { x: 100, y: 56, w: 880, h: 640 },
         align: "center",
+        defaultValign: "bottom",
         defaultSize: 72,
         defaultColor: CHARCOAL,
         placeholder: "Cut by hand.",
@@ -76,8 +80,9 @@ export const LAYOUTS: Layout[] = [
       {
         id: "subtext",
         label: "Subtext",
-        rect: { x: 100, y: 740, w: 880, h: 80 },
+        rect: { x: 100, y: 720, w: 880, h: 304 },
         align: "center",
+        defaultValign: "top",
         defaultSize: 28,
         defaultColor: TAUPE,
         placeholder: "Swipe for the process →",
@@ -96,8 +101,9 @@ export const LAYOUTS: Layout[] = [
       {
         id: "title",
         label: "Title",
-        rect: { x: 100, y: 180, w: 880, h: 140 },
+        rect: { x: 100, y: 56, w: 880, h: 264 },
         align: "left",
+        defaultValign: "bottom",
         defaultSize: 56,
         defaultColor: CHARCOAL,
         placeholder: "Shirt School: GSM",
@@ -114,8 +120,9 @@ export const LAYOUTS: Layout[] = [
       {
         id: "body",
         label: "Body",
-        rect: { x: 100, y: 470, w: 880, h: 420 },
+        rect: { x: 100, y: 460, w: 880, h: 564 },
         align: "left",
+        defaultValign: "top",
         defaultSize: 32,
         defaultColor: CHARCOAL,
         placeholder: "Grams per square metre tells you how a fabric will drape, wash and wear in.",
@@ -133,8 +140,9 @@ export const LAYOUTS: Layout[] = [
       {
         id: "caption",
         label: "Caption",
-        rect: { x: 72, y: 800, w: 936, h: 240 },
+        rect: { x: 72, y: 784, w: 936, h: 272 },
         align: "left",
+        defaultValign: "top",
         defaultSize: 48,
         defaultColor: CHARCOAL,
         placeholder: "The vat, three days in.",
@@ -155,8 +163,9 @@ export const LAYOUTS: Layout[] = [
       {
         id: "caption",
         label: "Caption",
-        rect: { x: 72, y: 800, w: 936, h: 240 },
+        rect: { x: 72, y: 784, w: 936, h: 272 },
         align: "left",
+        defaultValign: "top",
         defaultSize: 40,
         defaultColor: CHARCOAL,
         placeholder: "Texture, then context.",
