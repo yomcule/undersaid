@@ -227,6 +227,25 @@ export function drawText(ctx: CanvasRenderingContext2D, t: TextState, rect: Rect
   }
 }
 
+/** Carousel position, e.g. "01 / 06" — zero-padded so it lines up across a set of slides. */
+export function drawSlideNumber(
+  ctx: CanvasRenderingContext2D,
+  current: number,
+  total: number,
+  color: string,
+  canvasW: number,
+  canvasH: number,
+) {
+  const margin = 56;
+  const size = 26;
+  const label = `${String(current).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+  ctx.font = `500 ${size}px ${fontFamilyFor("workSans")}`;
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = "right";
+  ctx.fillStyle = color;
+  ctx.fillText(label, canvasW - margin, canvasH - margin);
+}
+
 /** Every `font` shorthand string the design tool can ever draw with — used
  * to warm the browser's font cache before the first paint, so canvas text
  * doesn't silently fall back to a system font while the real one loads. */

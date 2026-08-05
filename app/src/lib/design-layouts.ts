@@ -42,8 +42,11 @@ export const TAUPE = "#a8998a";
 
 // The only colors offered in the tool's swatch pickers — "no more than one
 // accent colour per post" means there is no reason to expose a full picker.
+// Off-white/Taupe/Charcoal is a monochrome ramp (light/mid/dark) for slides
+// that want no color accent at all; Clay is the one accent when you do.
 export const SWATCHES = [
   { label: "Off-white", value: OFF_WHITE },
+  { label: "Taupe", value: TAUPE },
   { label: "Charcoal", value: CHARCOAL },
   { label: "Clay", value: CLAY },
 ];

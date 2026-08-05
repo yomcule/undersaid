@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LAYOUTS, SWATCHES, EXPORT_FORMATS, OFF_WHITE, type Layout, type Rect } from "@/lib/design-layouts";
+import { LAYOUTS, SWATCHES, EXPORT_FORMATS, CHARCOAL, type Layout, type Rect } from "@/lib/design-layouts";
 import { FONT_OPTIONS, DESIGN_FONT_CLASSES, type FontKey } from "@/lib/design-fonts";
 import {
   loadImage,
   drawImageCover,
   drawText,
+  drawSlideNumber,
   allFontSpecs,
   DEFAULT_IMAGE_TRANSFORM,
   type TextState,
@@ -51,6 +52,13 @@ export function DesignStudio() {
   const [draggingSlot, setDraggingSlot] = useState<string | null>(null);
   const [formatId, setFormatId] = useState<(typeof EXPORT_FORMATS)[number]["id"]>(EXPORT_FORMATS[0].id);
   const format = EXPORT_FORMATS.find((f) => f.id === formatId) ?? EXPORT_FORMATS[0];
+
+  // Carousel position, not layout content — stays put across layout switches
+  // so numbering a set of slides doesn't mean re-entering it each time.
+  const [showSlideNumber, setShowSlideNumber] = useState(false);
+  const [slideCurrent, setSlideCurrent] = useState(1);
+  const [slideTotal, setSlideTotal] = useState(6);
+  const [slideNumberColor, setSlideNumberColor] = useState<string>(CHARCOAL);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ slotId: string; lastX: number; lastY: number } | null>(null);
@@ -153,13 +161,17 @@ export function DesignStudio() {
         const t = texts[slot.id];
         if (t) drawText(ctx, t, slot.rect);
       }
+
+      if (showSlideNumber) {
+        drawSlideNumber(ctx, slideCurrent, slideTotal, slideNumberColor, canvas!.width, canvas!.height);
+      }
     }
 
     draw();
     return () => {
       cancelled = true;
     };
-  }, [layout, images, texts, colors, transforms, fontsReady]);
+  }, [layout, images, texts, colors, transforms, fontsReady, showSlideNumber, slideCurrent, slideTotal, slideNumberColor]);
 
   function handleImageChange(slotId: string, file: File | null) {
     setTransforms((prev) => ({ ...prev, [slotId]: DEFAULT_IMAGE_TRANSFORM }));
@@ -181,20 +193,40 @@ export function DesignStudio() {
     if (!canvas) return;
 
     // The design is always composed at 1080×1080. For a non-square target,
-    // scale it down to fit and letterbox the rest, rather than cropping —
-    // cropping could cut off text or a photo's subject.
+    // scale it down to fit and pad the rest, rather than cropping — cropping
+    // could cut off text or a photo's subject. The padding is filled with
+    // whatever color is already at that edge of the design (not a fixed
+    // color), so it reads as the background continuing, not a visible bar.
+    function edgeColor(x: number, y: number) {
+      const [r, g, b] = canvas!.getContext("2d")!.getImageData(x, y, 1, 1).data;
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
     let source: HTMLCanvasElement = canvas;
     if (format.w !== canvas.width || format.h !== canvas.height) {
       const out = document.createElement("canvas");
       out.width = format.w;
       out.height = format.h;
       const ctx = out.getContext("2d")!;
-      ctx.fillStyle = OFF_WHITE;
-      ctx.fillRect(0, 0, format.w, format.h);
       const fitScale = Math.min(format.w / canvas.width, format.h / canvas.height);
       const dw = canvas.width * fitScale;
       const dh = canvas.height * fitScale;
-      ctx.drawImage(canvas, (format.w - dw) / 2, (format.h - dh) / 2, dw, dh);
+      const dx = (format.w - dw) / 2;
+      const dy = (format.h - dh) / 2;
+
+      if (dy > 0) {
+        ctx.fillStyle = edgeColor(Math.floor(canvas.width / 2), 0);
+        ctx.fillRect(0, 0, format.w, dy);
+        ctx.fillStyle = edgeColor(Math.floor(canvas.width / 2), canvas.height - 1);
+        ctx.fillRect(0, dy + dh, format.w, format.h - (dy + dh));
+      } else if (dx > 0) {
+        ctx.fillStyle = edgeColor(0, Math.floor(canvas.height / 2));
+        ctx.fillRect(0, 0, dx, format.h);
+        ctx.fillStyle = edgeColor(canvas.width - 1, Math.floor(canvas.height / 2));
+        ctx.fillRect(dx + dw, 0, format.w - (dx + dw), format.h);
+      }
+
+      ctx.drawImage(canvas, dx, dy, dw, dh);
       source = out;
     }
 
@@ -360,6 +392,50 @@ export function DesignStudio() {
                 onChange={(patch) => updateText(slot.id, patch)}
               />
             ))}
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3>Slide number</h3>
+              <button
+                type="button"
+                onClick={() => setShowSlideNumber((v) => !v)}
+                aria-pressed={showSlideNumber}
+                className={`label border px-3 py-1.5 transition-colors ${
+                  showSlideNumber ? "border-indigo bg-indigo text-kora" : "border-selvedge text-iron hover:border-indigo"
+                }`}
+              >
+                {showSlideNumber ? "On" : "Off"}
+              </button>
+            </div>
+            {showSlideNumber ? (
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2">
+                  <span className="label">Slide</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={slideCurrent}
+                    onChange={(e) => setSlideCurrent(Math.max(1, Number(e.target.value)))}
+                    className="w-16 border border-selvedge bg-kora-deep px-2 py-1.5 text-center data"
+                  />
+                </label>
+                <span className="text-iron">/</span>
+                <label className="flex items-center gap-2">
+                  <span className="label">Of</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={slideTotal}
+                    onChange={(e) => setSlideTotal(Math.max(1, Number(e.target.value)))}
+                    className="w-16 border border-selvedge bg-kora-deep px-2 py-1.5 text-center data"
+                  />
+                </label>
+                <ColorField label="Color" value={slideNumberColor} onChange={setSlideNumberColor} />
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
