@@ -31,12 +31,19 @@ const SIZE = { w: 1080, h: 1080 };
 // From the Michi Instagram Visual & Content Guidelines: warm off-white and
 // charcoal are the two named colors, "no more than one accent colour per
 // post." Neither the clay accent nor the taupe rule line has an exact hex in
-// the doc — CLAY and TAUPE below are a reasonable approximation, and both
-// are exposed as color pickers in the tool so they can be corrected exactly.
-const OFF_WHITE = "#f3efe7";
-const CHARCOAL = "#2b2926";
-const CLAY = "#bf6244";
-const TAUPE = "#a8998a";
+// the doc — CLAY and TAUPE below are a reasonable approximation.
+export const OFF_WHITE = "#f3efe7";
+export const CHARCOAL = "#2b2926";
+export const CLAY = "#bf6244";
+export const TAUPE = "#a8998a";
+
+// The only colors offered in the tool's swatch pickers — "no more than one
+// accent colour per post" means there is no reason to expose a full picker.
+export const SWATCHES = [
+  { label: "Off-white", value: OFF_WHITE },
+  { label: "Charcoal", value: CHARCOAL },
+  { label: "Clay", value: CLAY },
+];
 
 export const LAYOUTS: Layout[] = [
   {

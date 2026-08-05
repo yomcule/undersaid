@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LAYOUTS, type Layout } from "@/lib/design-layouts";
+import { LAYOUTS, SWATCHES, type Layout } from "@/lib/design-layouts";
 import { FONT_OPTIONS, DESIGN_FONT_CLASSES, type FontKey } from "@/lib/design-fonts";
 import { loadImage, drawImageCover, drawText, allFontSpecs, type TextState } from "@/lib/design-canvas";
 
@@ -235,17 +235,32 @@ export function DesignStudio() {
   );
 }
 
+// A fixed swatch set, not a full picker — the brand rule is "no more than
+// one accent colour per post," so there is nothing to gain from offering
+// the whole spectrum.
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <label className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4">
       <span className="label">{label}</span>
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-12 cursor-pointer border border-bone bg-transparent p-0"
-      />
-    </label>
+      <div className="flex items-center gap-2">
+        {SWATCHES.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            onClick={() => onChange(s.value)}
+            aria-label={s.label}
+            aria-pressed={value.toLowerCase() === s.value.toLowerCase()}
+            title={s.label}
+            style={{ backgroundColor: s.value }}
+            className={`size-7 rounded-full border transition-shadow ${
+              value.toLowerCase() === s.value.toLowerCase()
+                ? "border-indigo ring-2 ring-indigo ring-offset-2 ring-offset-kora"
+                : "border-bone"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
