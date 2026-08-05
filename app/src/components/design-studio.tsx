@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LAYOUTS, SWATCHES, type Layout, type Rect } from "@/lib/design-layouts";
+import { LAYOUTS, SWATCHES, EXPORT_FORMATS, OFF_WHITE, type Layout, type Rect } from "@/lib/design-layouts";
 import { FONT_OPTIONS, DESIGN_FONT_CLASSES, type FontKey } from "@/lib/design-fonts";
 import {
   loadImage,
@@ -49,6 +49,8 @@ export function DesignStudio() {
   const [colors, setColors] = useState<Record<string, string>>(initial.colors);
   const [fontsReady, setFontsReady] = useState(false);
   const [draggingSlot, setDraggingSlot] = useState<string | null>(null);
+  const [formatId, setFormatId] = useState<(typeof EXPORT_FORMATS)[number]["id"]>(EXPORT_FORMATS[0].id);
+  const format = EXPORT_FORMATS.find((f) => f.id === formatId) ?? EXPORT_FORMATS[0];
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ slotId: string; lastX: number; lastY: number } | null>(null);
@@ -177,12 +179,31 @@ export function DesignStudio() {
   function handleDownload() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.toBlob((blob) => {
+
+    // The design is always composed at 1080×1080. For a non-square target,
+    // scale it down to fit and letterbox the rest, rather than cropping —
+    // cropping could cut off text or a photo's subject.
+    let source: HTMLCanvasElement = canvas;
+    if (format.w !== canvas.width || format.h !== canvas.height) {
+      const out = document.createElement("canvas");
+      out.width = format.w;
+      out.height = format.h;
+      const ctx = out.getContext("2d")!;
+      ctx.fillStyle = OFF_WHITE;
+      ctx.fillRect(0, 0, format.w, format.h);
+      const fitScale = Math.min(format.w / canvas.width, format.h / canvas.height);
+      const dw = canvas.width * fitScale;
+      const dh = canvas.height * fitScale;
+      ctx.drawImage(canvas, (format.w - dw) / 2, (format.h - dh) / 2, dw, dh);
+      source = out;
+    }
+
+    source.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `michi-${layout.id}-${Date.now()}.png`;
+      a.download = `michi-${layout.id}-${format.id}-${Date.now()}.png`;
       a.click();
       URL.revokeObjectURL(url);
     }, "image/png");
@@ -227,14 +248,28 @@ export function DesignStudio() {
             <p className="mt-4 text-sm text-iron">Drag a photo on the canvas to reposition it.</p>
           ) : null}
           {!fontsReady ? <p className="mt-4 text-sm text-iron">Loading fonts…</p> : null}
-          <button
-            type="button"
-            onClick={handleDownload}
-            disabled={!fontsReady}
-            className="mt-8 bg-indigo px-6 py-4 text-kora hover:opacity-90 disabled:opacity-50"
-          >
-            Download PNG (1080×1080)
-          </button>
+
+          <div className="mt-8 flex flex-col gap-3">
+            <select
+              value={formatId}
+              onChange={(e) => setFormatId(e.target.value as (typeof EXPORT_FORMATS)[number]["id"])}
+              className="w-full max-w-[520px] border-b border-bone bg-transparent pb-2 text-sm focus:border-indigo focus:outline-none"
+            >
+              {EXPORT_FORMATS.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label} ({f.w}×{f.h})
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={!fontsReady}
+              className="bg-indigo px-6 py-4 text-kora hover:opacity-90 disabled:opacity-50"
+            >
+              Download PNG ({format.w}×{format.h})
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-10">
@@ -267,7 +302,7 @@ export function DesignStudio() {
                         <input
                           type="range"
                           min={1}
-                          max={3}
+                          max={4}
                           step={0.05}
                           value={transforms[slot.id]?.zoom ?? 1}
                           onChange={(e) =>

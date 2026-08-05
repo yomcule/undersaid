@@ -45,6 +45,15 @@ export const SWATCHES = [
   { label: "Clay", value: CLAY },
 ];
 
+// Every layout is composed as a 1080×1080 square. For platforms that don't
+// display square posts natively, the export is letterboxed onto a bigger
+// canvas rather than cropped, so nothing in the design gets cut off.
+export const EXPORT_FORMATS = [
+  { id: "square", label: "Square — Instagram, Facebook, LinkedIn", w: 1080, h: 1080 },
+  { id: "portrait", label: "Portrait — Instagram", w: 1080, h: 1350 },
+  { id: "landscape", label: "Landscape — X/Twitter", w: 1200, h: 675 },
+] as const;
+
 export const LAYOUTS: Layout[] = [
   {
     id: "hook",

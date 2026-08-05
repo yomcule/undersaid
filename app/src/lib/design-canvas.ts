@@ -26,12 +26,19 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
 export type ImageTransform = { zoom: number; x: number; y: number };
 export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = { zoom: 1, x: 0, y: 0 };
 
+// A plain "cover" fit leaves zero slack to pan in whichever axis the image's
+// aspect ratio already matches the frame's — e.g. a photo that's exactly as
+// tall as the frame can only ever pan sideways. Baking in a little extra
+// zoom guarantees there's always room to drag in both directions, even
+// before the user touches the zoom slider.
+const MIN_SLACK = 1.15;
+
 /**
- * Center-crop `img` to fill `rect` (the same fit as CSS `object-fit: cover`),
- * then pan and zoom within that crop. `transform.x`/`y` are a drag offset in
- * canvas pixels — positive x drags the visible image right, i.e. reveals
- * more of its left edge — clamped so the crop window can never show past
- * the source image's edges.
+ * Center-crop `img` to fill `rect` (the same fit as CSS `object-fit: cover`,
+ * plus MIN_SLACK headroom), then pan and zoom within that crop. `transform.x`/
+ * `y` are a drag offset in canvas pixels — dragging the pointer moves the
+ * image the same direction, like dragging a physical print — clamped so the
+ * crop window can never show past the source image's edges.
  */
 export function drawImageCover(
   ctx: CanvasRenderingContext2D,
@@ -39,7 +46,7 @@ export function drawImageCover(
   rect: Rect,
   transform: ImageTransform = DEFAULT_IMAGE_TRANSFORM,
 ) {
-  const baseScale = Math.max(rect.w / img.width, rect.h / img.height);
+  const baseScale = Math.max(rect.w / img.width, rect.h / img.height) * MIN_SLACK;
   const scale = baseScale * Math.max(1, transform.zoom);
 
   const sw = Math.min(rect.w / scale, img.width);

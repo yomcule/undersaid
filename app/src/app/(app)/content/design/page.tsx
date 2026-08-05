@@ -13,7 +13,7 @@ export default function DesignPage() {
         <PageHeader
           eyebrow="Studio"
           title="Design"
-          lede="Pick a layout, drop in photos and text, download at Instagram's full 1080×1080 resolution."
+          lede="Pick a layout, drop in photos and text, then download hi-res as a square, portrait, or landscape crop for Instagram, Facebook, LinkedIn, or X."
         />
       </div>
 
