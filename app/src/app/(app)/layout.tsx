@@ -54,6 +54,7 @@ export default async function AppLayout({
       label: "Studio",
       items: [
         { href: "/content", label: "Content" },
+        { href: "/content/design", label: "Design" },
         { href: "/inspiration", label: "Inspiration" },
       ],
     },
