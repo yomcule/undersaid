@@ -29,6 +29,7 @@ function defaultsFor(layout: Layout) {
       size: slot.defaultSize,
       color: slot.defaultColor,
       align: slot.align,
+      valign: "top",
     };
   }
   const colors: Record<string, string> = {};
@@ -383,6 +384,10 @@ function TextControls({
         rows={2}
         className="w-full border border-bone bg-transparent p-3 text-ink focus:border-indigo focus:outline-none"
       />
+      <p className="text-sm text-iron">
+        Wrap a word or phrase in <span className="data">**bold**</span>, <span className="data">*italic*</span>, or{" "}
+        <span className="data">~underline~</span> to format just that part.
+      </p>
 
       <select
         value={value.font}
@@ -411,6 +416,14 @@ function TextControls({
           {(["left", "center", "right"] as const).map((a) => (
             <ToggleButton key={a} active={value.align === a} onClick={() => onChange({ align: a })} label={`Align ${a}`}>
               {a === "left" ? "⟸" : a === "center" ? "↔" : "⟹"}
+            </ToggleButton>
+          ))}
+        </div>
+
+        <div className="ml-2 flex items-center gap-1">
+          {(["top", "middle", "bottom"] as const).map((v) => (
+            <ToggleButton key={v} active={value.valign === v} onClick={() => onChange({ valign: v })} label={`Align ${v}`}>
+              {v === "top" ? "⤒" : v === "middle" ? "↕" : "⤓"}
             </ToggleButton>
           ))}
         </div>

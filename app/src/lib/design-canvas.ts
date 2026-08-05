@@ -11,6 +11,7 @@ export type TextState = {
   size: number;
   color: string;
   align: "left" | "center" | "right";
+  valign: "top" | "middle" | "bottom";
 };
 
 export function loadImage(src: string): Promise<HTMLImageElement> {
@@ -54,64 +55,156 @@ function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), max);
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const lines: string[] = [];
-  for (const paragraph of text.split("\n")) {
-    const words = paragraph.split(" ");
-    let current = "";
-    for (const word of words) {
-      const test = current ? `${current} ${word}` : word;
-      if (current && ctx.measureText(test).width > maxWidth) {
-        lines.push(current);
-        current = word;
-      } else {
-        current = test;
-      }
-    }
-    lines.push(current);
-  }
-  return lines;
-}
-
 export function fontFamilyFor(key: FontKey): string {
   return FONT_OPTIONS.find((f) => f.key === key)?.family ?? "sans-serif";
 }
 
-function buildFont(t: TextState): string {
-  const weight = t.bold ? "700" : "400";
-  const style = t.italic ? "italic" : "normal";
+/**
+ * Inline formatting for one word or phrase inside an otherwise plain text
+ * block: wrap it in `**bold**`, `*italic*`, or `~underline~`. The block's own
+ * Bold/Italic/Underline toggles still apply to everything — a marker adds
+ * emphasis on top, it never removes what the toggle already set.
+ */
+const MARKER_RE = /(\*\*|\*|~)/g;
+
+type Run = { text: string; bold: boolean; italic: boolean; underline: boolean };
+
+function parseRuns(content: string): Run[] {
+  const runs: Run[] = [];
+  let bold = false;
+  let italic = false;
+  let underline = false;
+  for (const part of content.split(MARKER_RE)) {
+    if (part === "") continue;
+    if (part === "**") bold = !bold;
+    else if (part === "*") italic = !italic;
+    else if (part === "~") underline = !underline;
+    else runs.push({ text: part, bold, italic, underline });
+  }
+  return runs;
+}
+
+type Tok =
+  | { kind: "break" }
+  | { kind: "word" | "space"; text: string; bold: boolean; italic: boolean; underline: boolean };
+
+function tokenize(runs: Run[]): Tok[] {
+  const toks: Tok[] = [];
+  for (const run of runs) {
+    run.text.split("\n").forEach((paragraph, i) => {
+      if (i > 0) toks.push({ kind: "break" });
+      for (const piece of paragraph.split(/(\s+)/).filter(Boolean)) {
+        toks.push({
+          kind: /^\s+$/.test(piece) ? "space" : "word",
+          text: /^\s+$/.test(piece) ? " " : piece,
+          bold: run.bold,
+          italic: run.italic,
+          underline: run.underline,
+        });
+      }
+    });
+  }
+  return toks;
+}
+
+type LineTok = { text: string; width: number; bold: boolean; italic: boolean; underline: boolean; isSpace: boolean };
+
+function fontFor(t: TextState, bold: boolean, italic: boolean): string {
+  const weight = t.bold || bold ? "700" : "400";
+  const style = t.italic || italic ? "italic" : "normal";
   return `${style} ${weight} ${t.size}px ${fontFamilyFor(t.font)}`;
 }
 
-/** Draws wrapped, optionally underlined text top-aligned and clipped to `rect`. */
+function wrapRich(ctx: CanvasRenderingContext2D, t: TextState, maxWidth: number): LineTok[][] {
+  const lines: LineTok[][] = [[]];
+
+  function widthOf(text: string, bold: boolean, italic: boolean) {
+    ctx.font = fontFor(t, bold, italic);
+    return ctx.measureText(text).width;
+  }
+
+  function lineWidth(line: LineTok[]) {
+    return line.reduce((sum, tok) => sum + tok.width, 0);
+  }
+
+  for (const tok of tokenize(parseRuns(t.content))) {
+    if (tok.kind === "break") {
+      lines.push([]);
+      continue;
+    }
+    const current = lines[lines.length - 1];
+    const width = widthOf(tok.text, tok.bold, tok.italic);
+
+    if (tok.kind === "space") {
+      if (current.length === 0) continue; // no leading spaces on a wrapped line
+      current.push({ text: tok.text, width, bold: tok.bold, italic: tok.italic, underline: tok.underline, isSpace: true });
+      continue;
+    }
+
+    if (current.length > 0 && lineWidth(current) + width > maxWidth) {
+      if (current[current.length - 1]?.isSpace) current.pop();
+      lines.push([{ text: tok.text, width, bold: tok.bold, italic: tok.italic, underline: tok.underline, isSpace: false }]);
+    } else {
+      current.push({ text: tok.text, width, bold: tok.bold, italic: tok.italic, underline: tok.underline, isSpace: false });
+    }
+  }
+
+  return lines;
+}
+
+function drawUnderline(ctx: CanvasRenderingContext2D, startX: number, endX: number, y: number, size: number, color: string) {
+  if (endX <= startX) return;
+  ctx.beginPath();
+  ctx.moveTo(startX, y + size * 1.05);
+  ctx.lineTo(endX, y + size * 1.05);
+  ctx.lineWidth = Math.max(2, size * 0.05);
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+
+/** Draws wrapped, mixed-formatting text, vertically positioned and clipped to `rect`. */
 export function drawText(ctx: CanvasRenderingContext2D, t: TextState, rect: Rect) {
   if (!t.content.trim()) return;
 
-  ctx.font = buildFont(t);
-  ctx.fillStyle = t.color;
   ctx.textBaseline = "top";
-  ctx.textAlign = t.align;
-
+  ctx.textAlign = "left";
   const lineHeight = t.size * 1.25;
-  const lines = wrapText(ctx, t.content, rect.w);
-  const x = t.align === "left" ? rect.x : t.align === "right" ? rect.x + rect.w : rect.x + rect.w / 2;
+  const lines = wrapRich(ctx, t, rect.w);
+  const totalHeight = lines.length * lineHeight;
 
-  let y = rect.y;
+  let y =
+    t.valign === "middle"
+      ? rect.y + (rect.h - totalHeight) / 2
+      : t.valign === "bottom"
+        ? rect.y + rect.h - totalHeight
+        : rect.y;
+
   for (const line of lines) {
-    if (y + lineHeight > rect.y + rect.h) break;
-    ctx.fillText(line, x, y);
-
-    if (t.underline) {
-      const w = ctx.measureText(line).width;
-      const lineX = t.align === "left" ? x : t.align === "right" ? x - w : x - w / 2;
-      const underlineY = y + t.size * 1.05;
-      ctx.beginPath();
-      ctx.moveTo(lineX, underlineY);
-      ctx.lineTo(lineX + w, underlineY);
-      ctx.lineWidth = Math.max(2, t.size * 0.05);
-      ctx.strokeStyle = t.color;
-      ctx.stroke();
+    if (y + lineHeight <= rect.y - 0.5) {
+      y += lineHeight;
+      continue;
     }
+    if (y >= rect.y + rect.h + 0.5) break;
+
+    const width = line.reduce((sum, tok) => sum + tok.width, 0);
+    let x = t.align === "left" ? rect.x : t.align === "right" ? rect.x + rect.w - width : rect.x + (rect.w - width) / 2;
+
+    let underlineStart: number | null = null;
+    for (const tok of line) {
+      ctx.font = fontFor(t, tok.bold, tok.italic);
+      ctx.fillStyle = t.color;
+      if (!tok.isSpace) ctx.fillText(tok.text, x, y);
+
+      const underlined = t.underline || tok.underline;
+      if (underlined && underlineStart === null) underlineStart = x;
+      if (!underlined && underlineStart !== null) {
+        drawUnderline(ctx, underlineStart, x, y, t.size, t.color);
+        underlineStart = null;
+      }
+      x += tok.width;
+    }
+    if (underlineStart !== null) drawUnderline(ctx, underlineStart, x, y, t.size, t.color);
+
     y += lineHeight;
   }
 }
