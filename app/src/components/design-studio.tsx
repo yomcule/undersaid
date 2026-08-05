@@ -1,9 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LAYOUTS, SWATCHES, type Layout } from "@/lib/design-layouts";
+import { LAYOUTS, SWATCHES, type Layout, type Rect } from "@/lib/design-layouts";
 import { FONT_OPTIONS, DESIGN_FONT_CLASSES, type FontKey } from "@/lib/design-fonts";
-import { loadImage, drawImageCover, drawText, allFontSpecs, type TextState } from "@/lib/design-canvas";
+import {
+  loadImage,
+  drawImageCover,
+  drawText,
+  allFontSpecs,
+  DEFAULT_IMAGE_TRANSFORM,
+  type TextState,
+  type ImageTransform,
+} from "@/lib/design-canvas";
+
+function pointInRect(x: number, y: number, rect: Rect) {
+  return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+}
 
 function defaultsFor(layout: Layout) {
   const texts: Record<string, TextState> = {};
@@ -31,11 +43,14 @@ export function DesignStudio() {
 
   const initial = defaultsFor(LAYOUTS[0]);
   const [images, setImages] = useState<Record<string, string | null>>({});
+  const [transforms, setTransforms] = useState<Record<string, ImageTransform>>({});
   const [texts, setTexts] = useState<Record<string, TextState>>(initial.texts);
   const [colors, setColors] = useState<Record<string, string>>(initial.colors);
   const [fontsReady, setFontsReady] = useState(false);
+  const [draggingSlot, setDraggingSlot] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dragRef = useRef<{ slotId: string; lastX: number; lastY: number } | null>(null);
 
   // Switching layouts starts clean — carrying content across mismatched
   // slot counts and shapes would just produce a half-filled template. Reset
@@ -47,6 +62,47 @@ export function DesignStudio() {
     setTexts(d.texts);
     setColors(d.colors);
     setImages({});
+    setTransforms({});
+  }
+
+  // Canvas client coordinates -> the 1080-space the layout rects are defined
+  // in, so drag math works the same regardless of how small the preview is
+  // scaled down on screen.
+  function toCanvasSpace(e: { clientX: number; clientY: number }) {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
+    };
+  }
+
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    const { x, y } = toCanvasSpace(e);
+    const slot = layout.imageSlots.find((s) => images[s.id] && pointInRect(x, y, s.rect));
+    if (!slot) return;
+    dragRef.current = { slotId: slot.id, lastX: x, lastY: y };
+    setDraggingSlot(slot.id);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!dragRef.current) return;
+    const { x, y } = toCanvasSpace(e);
+    const dx = x - dragRef.current.lastX;
+    const dy = y - dragRef.current.lastY;
+    dragRef.current.lastX = x;
+    dragRef.current.lastY = y;
+    const { slotId } = dragRef.current;
+    setTransforms((prev) => {
+      const t = prev[slotId] ?? DEFAULT_IMAGE_TRANSFORM;
+      return { ...prev, [slotId]: { ...t, x: t.x + dx, y: t.y + dy } };
+    });
+  }
+
+  function handlePointerUp() {
+    dragRef.current = null;
+    setDraggingSlot(null);
   }
 
   // Warms every font/weight/style combo the canvas can draw so the first
@@ -82,7 +138,7 @@ export function DesignStudio() {
         }
         const img = await loadImage(src);
         if (cancelled) return;
-        drawImageCover(ctx, img, slot.rect);
+        drawImageCover(ctx, img, slot.rect, transforms[slot.id]);
       }
 
       for (const panel of layout.panels) {
@@ -100,9 +156,10 @@ export function DesignStudio() {
     return () => {
       cancelled = true;
     };
-  }, [layout, images, texts, colors, fontsReady]);
+  }, [layout, images, texts, colors, transforms, fontsReady]);
 
   function handleImageChange(slotId: string, file: File | null) {
+    setTransforms((prev) => ({ ...prev, [slotId]: DEFAULT_IMAGE_TRANSFORM }));
     if (!file) {
       setImages((prev) => ({ ...prev, [slotId]: null }));
       return;
@@ -157,8 +214,17 @@ export function DesignStudio() {
         <div>
           <canvas
             ref={canvasRef}
-            className="aspect-square w-full max-w-[520px] border border-bone bg-kora-deep"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className={`aspect-square w-full max-w-[520px] touch-none border border-bone bg-kora-deep ${
+              draggingSlot ? "cursor-grabbing" : layout.imageSlots.some((s) => images[s.id]) ? "cursor-grab" : ""
+            }`}
           />
+          {layout.imageSlots.length > 0 ? (
+            <p className="mt-4 text-sm text-iron">Drag a photo on the canvas to reposition it.</p>
+          ) : null}
           {!fontsReady ? <p className="mt-4 text-sm text-iron">Loading fonts…</p> : null}
           <button
             type="button"
@@ -175,22 +241,52 @@ export function DesignStudio() {
             <div className="flex flex-col gap-6">
               <h3>Photos</h3>
               {layout.imageSlots.map((slot) => (
-                <div key={slot.id} className="flex items-center gap-4">
-                  {images[slot.id] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={images[slot.id]!} alt="" className="size-16 border border-bone object-cover" />
-                  ) : (
-                    <div className="size-16 border border-bone bg-kora-deep" />
-                  )}
-                  <div className="flex flex-col gap-2">
-                    <span className="label">{slot.label}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageChange(slot.id, e.target.files?.[0] ?? null)}
-                      className="text-sm text-iron file:mr-3 file:border-0 file:bg-transparent file:text-ink file:underline"
-                    />
+                <div key={slot.id} className="flex flex-col gap-3">
+                  <div className="flex items-center gap-4">
+                    {images[slot.id] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={images[slot.id]!} alt="" className="size-16 border border-bone object-cover" />
+                    ) : (
+                      <div className="size-16 border border-bone bg-kora-deep" />
+                    )}
+                    <div className="flex flex-col gap-2">
+                      <span className="label">{slot.label}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageChange(slot.id, e.target.files?.[0] ?? null)}
+                        className="text-sm text-iron file:mr-3 file:border-0 file:bg-transparent file:text-ink file:underline"
+                      />
+                    </div>
                   </div>
+                  {images[slot.id] ? (
+                    <div className="flex items-center gap-4 pl-20">
+                      <label className="flex flex-1 items-center gap-3">
+                        <span className="label shrink-0">Zoom</span>
+                        <input
+                          type="range"
+                          min={1}
+                          max={3}
+                          step={0.05}
+                          value={transforms[slot.id]?.zoom ?? 1}
+                          onChange={(e) =>
+                            setTransforms((prev) => ({
+                              ...prev,
+                              [slot.id]: { ...(prev[slot.id] ?? DEFAULT_IMAGE_TRANSFORM), zoom: Number(e.target.value) },
+                            }))
+                          }
+                          className="w-full accent-indigo"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setTransforms((prev) => ({ ...prev, [slot.id]: DEFAULT_IMAGE_TRANSFORM }))}
+                        className="label shrink-0 hover:text-ink"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

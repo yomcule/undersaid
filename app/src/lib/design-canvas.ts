@@ -22,14 +22,36 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Center-crop `img` to fill `rect`, the same fit as CSS `object-fit: cover`. */
-export function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, rect: Rect) {
-  const scale = Math.max(rect.w / img.width, rect.h / img.height);
-  const sw = rect.w / scale;
-  const sh = rect.h / scale;
-  const sx = (img.width - sw) / 2;
-  const sy = (img.height - sh) / 2;
+export type ImageTransform = { zoom: number; x: number; y: number };
+export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = { zoom: 1, x: 0, y: 0 };
+
+/**
+ * Center-crop `img` to fill `rect` (the same fit as CSS `object-fit: cover`),
+ * then pan and zoom within that crop. `transform.x`/`y` are a drag offset in
+ * canvas pixels — positive x drags the visible image right, i.e. reveals
+ * more of its left edge — clamped so the crop window can never show past
+ * the source image's edges.
+ */
+export function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  rect: Rect,
+  transform: ImageTransform = DEFAULT_IMAGE_TRANSFORM,
+) {
+  const baseScale = Math.max(rect.w / img.width, rect.h / img.height);
+  const scale = baseScale * Math.max(1, transform.zoom);
+
+  const sw = Math.min(rect.w / scale, img.width);
+  const sh = Math.min(rect.h / scale, img.height);
+
+  const sx = clamp((img.width - sw) / 2 - transform.x / scale, 0, img.width - sw);
+  const sy = clamp((img.height - sh) / 2 - transform.y / scale, 0, img.height - sh);
+
   ctx.drawImage(img, sx, sy, sw, sh, rect.x, rect.y, rect.w, rect.h);
+}
+
+function clamp(v: number, min: number, max: number) {
+  return Math.min(Math.max(v, min), max);
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
