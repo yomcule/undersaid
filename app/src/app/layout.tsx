@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { Fraunces, Work_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, Work_Sans } from "next/font/google";
 import "./globals.css";
 
-// All three are SIL OFL 1.1 — free, commercial use permitted.
-// Three families is the ceiling; a fourth is a "never".
+// Two families, both SIL OFL 1.1 — free, commercial use permitted.
 // Loaded as a true variable font: `axes` and a fixed `weight` are mutually
 // exclusive, and the WONK axis is the whole reason Fraunces was chosen.
 // Weight is constrained to 300–400 in globals.css instead — never 500 or
@@ -16,17 +15,13 @@ const fraunces = Fraunces({
 
 // Work Sans, not the Archivo the guidelines name. Archivo's 400 read too
 // heavy against Fraunces at body size; Work Sans is humanist and open, and
-// 300 is the intended body weight — hence no 600 here at all.
+// 300 is the intended body weight — hence no 600 here at all. It also
+// carries the data role (money, dates, codes) via tabular-nums, so there is
+// no third face in the system.
 const workSans = Work_Sans({
   variable: "--font-work-sans",
   subsets: ["latin"],
   weight: ["300", "400", "500"],
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -38,10 +33,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${fraunces.variable} ${workSans.variable} ${plexMono.variable} h-full`}
-    >
+    <html lang="en" className={`${fraunces.variable} ${workSans.variable} h-full`}>
       <body className="min-h-full">{children}</body>
     </html>
   );

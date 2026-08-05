@@ -24,7 +24,7 @@ export function Card({ children }: { children: ReactNode }) {
   return <div className="bg-kora-deep p-8">{children}</div>;
 }
 
-/** A single figure. Numbers that are data use Plex Mono. */
+/** A single figure. Numbers that are data use tabular-nums via .data. */
 export function Stat({
   label,
   value,

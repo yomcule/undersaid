@@ -22,7 +22,6 @@
 
   --font-display: var(--font-fraunces);
   --font-sans: var(--font-work-sans);
-  --font-mono: var(--font-plex-mono);
 
   /* Vertical rhythm: 8px base unit, all spacing a multiple of 8.
      Do NOT redefine --spacing to 0.5rem to enforce this — in Tailwind v4 that
@@ -84,10 +83,10 @@ h3 { font-size: 1.25rem; line-height: 1.3; font-weight: 400; }
   }
 
   /* Anything that is data — lot codes, batch codes, measurements, money.
-     Numbers in running text use Archivo; numbers that are data use Plex Mono.
-     That distinction is what makes the mono meaningful rather than decorative. */
+     Same face as running text, but tabular-nums so figures align in columns
+     — the distinction is alignment, not a second typeface. */
   .data {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-variant-numeric: tabular-nums;
     font-size: 0.875rem;
   }
@@ -141,10 +140,9 @@ h3 { font-size: 1.25rem; line-height: 1.3; font-weight: 400; }
     opacity: 1;   /* Firefox dims placeholders further on its own. */
   }
 
-  /* Date and number inputs get mono, because they are data. */
+  /* Date and number inputs are data — tabular-nums, same face as the rest. */
   input[type="date"],
   input[type="number"] {
-    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 
