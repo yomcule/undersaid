@@ -50,7 +50,7 @@ export function DesignStudio() {
   const [colors, setColors] = useState<Record<string, string>>(initial.colors);
   const [fontsReady, setFontsReady] = useState(false);
   const [draggingSlot, setDraggingSlot] = useState<string | null>(null);
-  const [formatId, setFormatId] = useState<(typeof EXPORT_FORMATS)[number]["id"]>(EXPORT_FORMATS[0].id);
+  const [formatId, setFormatId] = useState<(typeof EXPORT_FORMATS)[number]["id"]>("portrait");
   const format = EXPORT_FORMATS.find((f) => f.id === formatId) ?? EXPORT_FORMATS[0];
 
   // Carousel position, not layout content — stays put across layout switches
@@ -255,7 +255,7 @@ export function DesignStudio() {
             type="button"
             onClick={() => selectLayout(l)}
             className={`border px-4 py-3 text-left transition-colors ${
-              l.id === layoutId ? "border-indigo text-ink" : "border-selvedge text-iron hover:border-indigo"
+              l.id === layoutId ? "border-indigo text-ink" : "border-iron text-iron hover:border-indigo"
             }`}
           >
             <span className="label block">{l.name}</span>
@@ -285,7 +285,7 @@ export function DesignStudio() {
             <select
               value={formatId}
               onChange={(e) => setFormatId(e.target.value as (typeof EXPORT_FORMATS)[number]["id"])}
-              className="w-full max-w-[520px] border border-selvedge bg-kora-deep px-3 py-2 text-sm focus:border-indigo focus:outline-none"
+              className="w-full max-w-[520px] border border-iron bg-kora-deep px-3 py-2 text-sm focus:border-indigo focus:outline-none"
             >
               {EXPORT_FORMATS.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -402,7 +402,7 @@ export function DesignStudio() {
                 onClick={() => setShowSlideNumber((v) => !v)}
                 aria-pressed={showSlideNumber}
                 className={`label border px-3 py-1.5 transition-colors ${
-                  showSlideNumber ? "border-indigo bg-indigo text-kora" : "border-selvedge text-iron hover:border-indigo"
+                  showSlideNumber ? "border-indigo bg-indigo text-kora" : "border-iron text-iron hover:border-indigo"
                 }`}
               >
                 {showSlideNumber ? "On" : "Off"}
@@ -418,7 +418,7 @@ export function DesignStudio() {
                     max={99}
                     value={slideCurrent}
                     onChange={(e) => setSlideCurrent(Math.max(1, Number(e.target.value)))}
-                    className="w-16 border border-selvedge bg-kora-deep px-2 py-1.5 text-center data"
+                    className="w-16 border border-iron bg-kora-deep px-2 py-1.5 text-center data"
                   />
                 </label>
                 <span className="text-iron">/</span>
@@ -430,7 +430,7 @@ export function DesignStudio() {
                     max={99}
                     value={slideTotal}
                     onChange={(e) => setSlideTotal(Math.max(1, Number(e.target.value)))}
-                    className="w-16 border border-selvedge bg-kora-deep px-2 py-1.5 text-center data"
+                    className="w-16 border border-iron bg-kora-deep px-2 py-1.5 text-center data"
                   />
                 </label>
                 <ColorField label="Color" value={slideNumberColor} onChange={setSlideNumberColor} />
@@ -463,7 +463,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
             className={`size-7 rounded-full border transition-shadow ${
               value.toLowerCase() === s.value.toLowerCase()
                 ? "border-indigo ring-2 ring-indigo ring-offset-2 ring-offset-kora"
-                : "border-selvedge"
+                : "border-iron"
             }`}
           />
         ))}
@@ -493,7 +493,7 @@ function TextControls({
         onChange={(e) => onChange({ content: e.target.value })}
         placeholder={placeholder}
         rows={2}
-        className="w-full border border-selvedge bg-kora-deep p-3 text-ink focus:border-indigo focus:outline-none"
+        className="w-full border border-iron bg-kora-deep p-3 text-ink focus:border-indigo focus:outline-none"
       />
       <p className="text-sm text-iron">
         Wrap a word or phrase in <span className="data">**bold**</span>, <span className="data">*italic*</span>, or{" "}
@@ -503,7 +503,7 @@ function TextControls({
       <select
         value={value.font}
         onChange={(e) => onChange({ font: e.target.value as FontKey })}
-        className="w-full border border-selvedge bg-kora-deep px-3 py-2 text-sm focus:border-indigo focus:outline-none"
+        className="w-full border border-iron bg-kora-deep px-3 py-2 text-sm focus:border-indigo focus:outline-none"
       >
         {FONT_OPTIONS.map((f) => (
           <option key={f.key} value={f.key}>
@@ -578,7 +578,7 @@ function ToggleButton({
       aria-label={label}
       title={label}
       className={`flex size-8 items-center justify-center border text-sm transition-colors ${
-        active ? "border-indigo bg-indigo text-kora" : "border-selvedge text-iron hover:border-indigo"
+        active ? "border-indigo bg-indigo text-kora" : "border-iron text-iron hover:border-indigo"
       }`}
     >
       {children}
